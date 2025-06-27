@@ -1,6 +1,5 @@
-# AI Resume Screener and JD Matcher (Enhanced UI)
-
 import os
+import re
 
 try:
     import PyPDF2
@@ -35,19 +34,35 @@ if dependencies_available:
         except:
             return ""
 
-    def compute_similarity(resume_texts, jd_text):
+    def extract_keywords(text, top_n=10):
+        words = re.findall(r'\b[a-zA-Z]{4,}\b', text.lower())
+        freq = pd.Series(words).value_counts()
+        return freq.head(top_n).index.tolist()
+
+    def compute_similarity(resume_texts, jd_text, filename_weight=0.2):
         jd_embedding = model.encode(jd_text, convert_to_tensor=True)
+        jd_keywords = extract_keywords(jd_text)
         results = []
+
         for name, text in resume_texts:
             if not text.strip():
                 results.append((name, 0))
                 continue
+
             resume_embedding = model.encode(text, convert_to_tensor=True)
-            score = util.cos_sim(jd_embedding, resume_embedding).item()
-            results.append((name, round(score * 100, 2)))
+            content_score = util.cos_sim(jd_embedding, resume_embedding).item()
+
+            # Filename match scoring
+            name_clean = os.path.splitext(name)[0].lower().replace("_", " ").replace("-", " ")
+            matches = sum(1 for keyword in jd_keywords if keyword in name_clean)
+            filename_score = matches / len(jd_keywords) if jd_keywords else 0
+
+            total_score = (1 - filename_weight) * content_score + filename_weight * filename_score
+            results.append((name, round(total_score * 100, 2)))
+
         return sorted(results, key=lambda x: x[1], reverse=True)
 
-    # Page config and styled title
+    # Page UI setup
     st.set_page_config(page_title="AI Resume Screener", page_icon="📄", layout="wide")
     st.markdown("""
         <style>
@@ -89,10 +104,12 @@ if dependencies_available:
             else:
                 st.info("⏳ Processing...")
                 resume_texts = []
+
                 for uploaded_file in resume_files:
                     file_ext = os.path.splitext(uploaded_file.name)[1].lower()
                     temp_filename = uploaded_file.name
                     bytes_data = uploaded_file.read()
+
                     with open(temp_filename, "wb") as f:
                         f.write(bytes_data)
 
