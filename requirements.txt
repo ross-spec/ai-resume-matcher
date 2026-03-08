@@ -3,3 +3,5 @@ pandas
 PyPDF2
 docx2txt
 sentence-transformers
+openpyxl
+openai
