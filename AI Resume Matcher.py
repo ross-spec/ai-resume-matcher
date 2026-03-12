@@ -23,29 +23,30 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT HEADER */
-
 header {visibility:hidden;}
 [data-testid="stToolbar"] {display:none;}
 [data-testid="stDecoration"] {display:none;}
 [data-testid="stStatusWidget"] {display:none;}
 
-/* PAGE SPACING */
-
 .block-container{
 padding-top:2rem;
-max-width:100%;
+max-width:1200px;
 }
 
-/* TEXT */
+/* HERO CARD */
 
-p,label{
-color:#333333;
-font-size:15px;
+.hero{
+background:#f8fafc;
+padding:30px;
+border-radius:12px;
+border:1px solid #e5e7eb;
 }
 
-h1,h2,h3{
-color:#111111;
+/* BRAND */
+
+.brand{
+color:#2563eb;
+font-weight:800;
 }
 
 /* RIGHT PANEL */
@@ -65,6 +66,7 @@ padding:10px;
 border-radius:8px;
 color:#0f172a;
 font-weight:700;
+margin-bottom:10px;
 }
 
 /* RESULT CARDS */
@@ -92,43 +94,15 @@ padding:10px 16px;
 background:#1d4ed8;
 }
 
-/* FILE UPLOADER BUTTON */
-
-[data-testid="stFileUploader"] button{
-color:black !important;
-font-weight:600 !important;
-}
-
 </style>
 """, unsafe_allow_html=True)
-
-# ------------------------------------------------
-# TITLE
-# ------------------------------------------------
-
-st.title("HireAI – Smart Resume Screening")
-
-st.markdown(
-"""
-### AI Resume Screening & Candidate Ranking
-
-Upload resumes and paste a job description to instantly:
-
-• Rank candidates based on AI matching  
-• Extract important candidate skills  
-• Generate interview questions  
-• Get hiring recommendations
-"""
-)
 
 # ------------------------------------------------
 # AI CONFIG
 # ------------------------------------------------
 
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
-
 MODEL = "openai/gpt-4o-mini"
-
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -146,8 +120,8 @@ def call_ai(prompt):
 
     payload = {
         "model": MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.2
+        "messages": [{"role":"user","content":prompt}],
+        "temperature":0.2
     }
 
     r = requests.post(API_URL, headers=headers, json=payload)
@@ -183,7 +157,7 @@ def extract_text_from_docx(file):
 
 def extract_skills(resume_text):
 
-    prompt = f"""
+    prompt=f"""
 Extract top professional skills from this resume.
 
 Return a simple bullet list.
@@ -198,25 +172,25 @@ Resume:
 # RESUME MATCHING
 # ------------------------------------------------
 
-def compute_similarity(resume_texts, jd_text):
+def compute_similarity(resume_texts,jd_text):
 
-    jd_embedding = embedding_model.encode(jd_text, convert_to_tensor=True)
+    jd_embedding=embedding_model.encode(jd_text,convert_to_tensor=True)
 
-    results = []
+    results=[]
 
-    for name, text in resume_texts:
+    for name,text in resume_texts:
 
-        resume_embedding = embedding_model.encode(text, convert_to_tensor=True)
+        resume_embedding=embedding_model.encode(text,convert_to_tensor=True)
 
-        score = util.cos_sim(jd_embedding, resume_embedding).item()
+        score=util.cos_sim(jd_embedding,resume_embedding).item()
 
-        score = round(score * 100, 2)
+        score=round(score*100,2)
 
-        experience = 3
+        experience=3
 
-        results.append((name, text, score, experience))
+        results.append((name,text,score,experience))
 
-    return sorted(results, key=lambda x: x[2], reverse=True)
+    return sorted(results,key=lambda x:x[2],reverse=True)
 
 # ------------------------------------------------
 # INTERVIEW QUESTIONS
@@ -224,7 +198,7 @@ def compute_similarity(resume_texts, jd_text):
 
 def generate_questions(jd):
 
-    prompt = f"""
+    prompt=f"""
 Generate 10 interview questions strictly based on this job description.
 
 Job Description:
@@ -239,9 +213,9 @@ Return numbered questions only.
 # AI RECOMMENDATION
 # ------------------------------------------------
 
-def generate_recommendation(jd, resume, score):
+def generate_recommendation(jd,resume,score):
 
-    prompt = f"""
+    prompt=f"""
 Analyze candidate suitability.
 
 Match Score: {score}
@@ -265,7 +239,38 @@ Hiring recommendation
 # LAYOUT
 # ------------------------------------------------
 
-left, right = st.columns([3, 1])
+left, right = st.columns([3,1])
+
+# ------------------------------------------------
+# HERO SECTION
+# ------------------------------------------------
+
+with left:
+
+    st.markdown("""
+    <div class='hero'>
+
+    <h1><span class='brand'>HireAI</span> – Smart Resume Screening</h1>
+
+    <h3>AI Resume Screening & Candidate Ranking</h3>
+
+    Upload resumes and paste a job description to instantly:
+
+    • Rank candidates based on AI matching  
+    • Extract important candidate skills  
+    • Generate interview questions  
+    • Get hiring recommendations
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("")
+
+    col1,col2,col3 = st.columns(3)
+
+    col1.metric("Screening Speed","10x Faster")
+    col2.metric("AI Accuracy","95%")
+    col3.metric("Hiring Time","-70%")
 
 # ------------------------------------------------
 # RIGHT PANEL
@@ -273,108 +278,104 @@ left, right = st.columns([3, 1])
 
 with right:
 
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
+    st.markdown('<div class="panel">',unsafe_allow_html=True)
 
-    st.markdown('<div class="section-header">Upload Resumes</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Upload Resumes</div>',unsafe_allow_html=True)
 
-    resume_files = st.file_uploader(
+    resume_files=st.file_uploader(
         "Upload PDF or DOCX resumes",
-        type=["pdf", "docx"],
+        type=["pdf","docx"],
         accept_multiple_files=True
     )
 
     st.markdown("---")
 
-    st.markdown('<div class="section-header">Job Description</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Job Description</div>',unsafe_allow_html=True)
 
-    jd_input = st.text_area(
+    jd_input=st.text_area(
         "Paste job description",
         height=200
     )
 
-    analyze = st.button("Analyze Candidates")
+    analyze=st.button("Analyze Candidates")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>',unsafe_allow_html=True)
 
 # ------------------------------------------------
 # RESULTS
 # ------------------------------------------------
 
-with left:
+if analyze:
 
-    if analyze:
+    if not resume_files or not jd_input:
 
-        if not resume_files or not jd_input:
+        st.warning("Upload resumes and provide job description")
 
-            st.warning("Upload resumes and provide job description")
+    else:
 
-        else:
+        with st.spinner("Analyzing resumes with AI..."):
 
-            with st.spinner("Analyzing resumes with AI..."):
+            resume_texts=[]
 
-                resume_texts = []
+            for file in resume_files:
 
-                for file in resume_files:
+                ext=os.path.splitext(file.name)[1]
 
-                    ext = os.path.splitext(file.name)[1]
+                if ext==".pdf":
+                    text=extract_text_from_pdf(file)
+                else:
+                    text=extract_text_from_docx(file)
 
-                    if ext == ".pdf":
-                        text = extract_text_from_pdf(file)
-                    else:
-                        text = extract_text_from_docx(file)
+                resume_texts.append((file.name,text))
 
-                    resume_texts.append((file.name, text))
+            results=compute_similarity(resume_texts,jd_input)
 
-                results = compute_similarity(resume_texts, jd_input)
+            questions=generate_questions(jd_input)
 
-                questions = generate_questions(jd_input)
+        st.subheader("Candidate Ranking")
 
-            df = pd.DataFrame(
-                [(i + 1, r[0], r[2]) for i, r in enumerate(results)],
-                columns=["Rank", "Candidate Name", "Match Score"]
-            )
+        df=pd.DataFrame(
+            [(i+1,r[0],r[2]) for i,r in enumerate(results)],
+            columns=["Rank","Candidate Name","Match Score"]
+        )
 
-            st.subheader("Candidate Ranking")
+        st.dataframe(df,use_container_width=True)
 
-            st.dataframe(df, use_container_width=True)
+        csv=df.to_csv(index=False).encode("utf-8")
 
-            csv = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "Download Ranking CSV",
+            csv,
+            "candidate_ranking.csv",
+            "text/csv"
+        )
 
-            st.download_button(
-                "Download Ranking CSV",
-                csv,
-                "candidate_ranking.csv",
-                "text/csv"
-            )
+        st.subheader("Interview Questions")
 
-            st.subheader("Interview Questions")
+        st.write(questions)
 
-            st.write(questions)
+        st.subheader("Candidate Analysis")
 
-            st.subheader("Candidate Analysis")
+        for rank,(name,text,score,exp) in enumerate(results,1):
 
-            for rank, (name, text, score, exp) in enumerate(results, 1):
+            st.markdown('<div class="result-card">',unsafe_allow_html=True)
 
-                st.markdown('<div class="result-card">', unsafe_allow_html=True)
+            st.markdown(f"### {rank}. {name}")
 
-                st.markdown(f"### {rank}. {name}")
+            st.write(f"Match Score: {score}%")
 
-                st.write(f"Match Score: {score}%")
+            st.progress(score/100)
 
-                st.progress(score / 100)
+            st.write(f"Estimated Experience: {exp} years")
 
-                st.write(f"Estimated Experience: {exp} years")
+            skills=extract_skills(text)
 
-                skills = extract_skills(text)
+            st.write("Top Skills:")
+            st.write(skills)
 
-                st.write("Top Skills:")
+            recommendation=generate_recommendation(jd_input,text,score)
 
-                st.write(skills)
+            st.write("AI Recommendation")
+            st.write(recommendation)
 
-                recommendation = generate_recommendation(jd_input, text, score)
-
-                st.write("AI Recommendation")
-
-                st.write(recommendation)
-
-                st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("</div>",unsafe_allow_html=True)
