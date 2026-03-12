@@ -1,5 +1,4 @@
 import streamlit as st
-import base64
 import os
 import requests
 import pandas as pd
@@ -26,46 +25,9 @@ st.title("HireAI – Smart Resume Screening")
 if "analysis_done" not in st.session_state:
     st.session_state.analysis_done = False
 
-BASE_COLOR = "#071c2c"
 
 # ------------------------------------------------
-# BACKGROUND
-# ------------------------------------------------
-
-def set_background(show_image=True):
-
-    if show_image:
-
-        with open("background.png","rb") as f:
-            encoded = base64.b64encode(f.read()).decode()
-
-        st.markdown(f"""
-        <style>
-        .stApp {{
-        background-image:url("data:image/png;base64,{encoded}");
-        background-size:cover;
-        background-position:center;
-        background-repeat:no-repeat;
-        background-color:{BASE_COLOR};
-        }}
-        </style>
-        """,unsafe_allow_html=True)
-
-    else:
-
-        st.markdown(f"""
-        <style>
-        .stApp {{
-        background:{BASE_COLOR};
-        background-image:none;
-        }}
-        </style>
-        """,unsafe_allow_html=True)
-
-set_background(not st.session_state.analysis_done)
-
-# ------------------------------------------------
-# CSS
+# CSS (WHITE BACKGROUND OPTIMIZED)
 # ------------------------------------------------
 
 st.markdown("""
@@ -74,37 +36,71 @@ st.markdown("""
 header {display:none;}
 
 .block-container{
-padding-top:0rem;
+padding-top:1rem;
 max-width:100%;
 }
 
+/* TEXT */
+
+p,label{
+color:#333333;
+font-size:15px;
+}
+
+h1,h2,h3{
+color:#111111;
+}
+
+/* RIGHT PANEL */
+
 .panel{
-background:rgba(7,28,44,0.85);
+background:#f6f8fb;
 padding:25px;
 border-radius:12px;
+border:1px solid #e5e7eb;
 }
+
+/* SECTION HEADERS */
 
 .section-header{
-background:linear-gradient(90deg,#00bfff,#0080ff);
+background:#eaf3ff;
 padding:10px;
 border-radius:8px;
-color:white;
+color:#0f172a;
 font-weight:700;
 }
+
+/* RESULT CARDS */
 
 .result-card{
-background:rgba(7,28,44,0.95);
+background:white;
 padding:20px;
 border-radius:10px;
+border:1px solid #e5e7eb;
 margin-bottom:15px;
-color:white;
+color:#111111;
+box-shadow:0 2px 6px rgba(0,0,0,0.05);
 }
 
+/* BUTTON */
+
 .stButton > button {
-background:#00bfff;
-color:black;
+background:#2563eb;
+color:white;
 font-weight:700;
 border-radius:8px;
+padding:10px 16px;
+}
+
+.stButton > button:hover {
+background:#1d4ed8;
+}
+
+/* FILE UPLOADER */
+
+[data-testid="stFileUploader"] button{
+color:black !important;
+font-weight:600 !important;
 }
 
 </style>
@@ -317,8 +313,6 @@ with main:
 
                 questions=generate_questions(jd_input)
 
-            # ranking dataframe
-
             df=pd.DataFrame(
                 [(i+1,r[0],r[2]) for i,r in enumerate(results)],
                 columns=["Rank","Candidate Name","Match Score"]
@@ -327,8 +321,6 @@ with main:
             st.subheader("Candidate Ranking")
 
             st.dataframe(df,use_container_width=True)
-
-            # download results
 
             csv=df.to_csv(index=False).encode("utf-8")
 
