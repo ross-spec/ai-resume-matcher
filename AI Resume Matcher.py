@@ -7,9 +7,9 @@ import pandas as pd
 import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 
-# ---------------------------------
+# -----------------------------------
 # PAGE CONFIG
-# ---------------------------------
+# -----------------------------------
 
 st.set_page_config(
     page_title="AI Resume Screener",
@@ -17,9 +17,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------------------------
+# -----------------------------------
 # OPENROUTER CONFIG
-# ---------------------------------
+# -----------------------------------
 
 try:
     OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
@@ -27,62 +27,51 @@ except:
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 MODEL = "openai/gpt-4o-mini"
-
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Local embedding model for similarity
-model = SentenceTransformer("all-MiniLM-L6-v2")
+# Local embedding model
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# ---------------------------------
+# -----------------------------------
 # AI CALL FUNCTION
-# ---------------------------------
+# -----------------------------------
 
 def call_ai(prompt):
 
-    try:
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        }
+    payload = {
+        "model": MODEL,
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.2
+    }
 
-        payload = {
-            "model": MODEL,
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.2
-        }
+    response = requests.post(API_URL, headers=headers, json=payload)
 
-        response = requests.post(
-            API_URL,
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
+    if response.status_code != 200:
+        return f"API Error: {response.text}"
 
-        if response.status_code != 200:
-            return f"API Error: {response.text}"
+    data = response.json()
 
-        data = response.json()
+    if "choices" not in data:
+        return f"API Error: {data}"
 
-        if "choices" not in data:
-            return f"API Error: {data}"
+    return data["choices"][0]["message"]["content"]
 
-        return data["choices"][0]["message"]["content"]
-
-    except Exception as e:
-        return f"AI Exception: {str(e)}"
-
-# ---------------------------------
-# TEXT EXTRACTION
-# ---------------------------------
+# -----------------------------------
+# FILE TEXT EXTRACTION
+# -----------------------------------
 
 def extract_text_from_pdf(path):
 
     text = ""
 
-    with open(path, "rb") as file:
+    with open(path,"rb") as file:
 
         reader = PyPDF2.PdfReader(file)
 
@@ -100,26 +89,57 @@ def extract_text_from_docx(path):
 
     return docx2txt.process(path)
 
-# ---------------------------------
-# KEYWORD EXTRACTION
-# ---------------------------------
+# -----------------------------------
+# AI EXTRACTION FUNCTIONS
+# -----------------------------------
 
-def extract_keywords(text):
+def extract_required_skills(jd_text):
 
-    words = re.findall(r"\b[a-zA-Z]{4,}\b", text.lower())
+    prompt = f"""
+    Extract required technical skills from this job description.
+    Return only comma separated skills.
 
-    freq = pd.Series(words).value_counts()
+    Job Description:
+    {jd_text[:2000]}
+    """
 
-    return list(freq.head(20).index)
+    return call_ai(prompt)
 
-# ---------------------------------
-# AI ANALYSIS FUNCTIONS
-# ---------------------------------
+
+def extract_candidate_skills(resume_text):
+
+    prompt = f"""
+    Extract technical skills from this resume.
+    Return only comma separated skills.
+
+    Resume:
+    {resume_text[:2000]}
+    """
+
+    return call_ai(prompt)
+
+
+def extract_experience(resume_text):
+
+    prompt = f"""
+    Estimate total years of experience from this resume.
+
+    Return only a number.
+
+    Resume:
+    {resume_text[:2000]}
+    """
+
+    return call_ai(prompt)
+
+# -----------------------------------
+# CANDIDATE SUMMARY
+# -----------------------------------
 
 def generate_candidate_summary(resume_text):
 
     prompt = f"""
-    Analyze the resume and provide:
+    Analyze this resume and provide:
 
     Candidate Role
     Years of Experience
@@ -132,11 +152,14 @@ def generate_candidate_summary(resume_text):
 
     return call_ai(prompt)
 
+# -----------------------------------
+# SKILL GAP ANALYSIS
+# -----------------------------------
 
-def skill_gap_analysis(jd_text, resume_text):
+def skill_gap_analysis(jd_text,resume_text):
 
     prompt = f"""
-    Compare the job description and resume.
+    Compare job description and resume.
 
     Provide:
     Required Skills
@@ -152,52 +175,94 @@ def skill_gap_analysis(jd_text, resume_text):
 
     return call_ai(prompt)
 
+# -----------------------------------
+# EXPERIENCE BASED INTERVIEW QUESTIONS
+# -----------------------------------
 
-def generate_interview_questions(jd_text, resume_text):
+def generate_interview_questions(jd_text,resume_text,experience):
 
     prompt = f"""
-    Generate 5 technical interview questions based on the job description and resume.
+    Generate interview questions based on candidate experience.
+
+    Candidate Experience: {experience} years
+
+    If experience <2 years → beginner
+    2-5 years → intermediate
+    >5 years → advanced
 
     Job Description:
     {jd_text[:1500]}
 
     Resume:
     {resume_text[:1500]}
+
+    Generate 5 interview questions.
     """
 
     return call_ai(prompt)
 
-# ---------------------------------
-# RESUME MATCHING
-# ---------------------------------
+# -----------------------------------
+# KEYWORD EXTRACTION
+# -----------------------------------
 
-def compute_similarity(resume_texts, jd_text):
+def extract_keywords(text):
 
-    jd_embedding = model.encode(jd_text, convert_to_tensor=True)
+    words = re.findall(r"\b[a-zA-Z]{4,}\b", text.lower())
 
-    jd_keywords = extract_keywords(jd_text)
+    freq = pd.Series(words).value_counts()
+
+    return list(freq.head(20).index)
+
+# -----------------------------------
+# ADVANCED ATS SCORING
+# -----------------------------------
+
+def compute_similarity(resume_texts,jd_text):
+
+    jd_embedding = embedding_model.encode(jd_text,convert_to_tensor=True)
+
+    required_skills = extract_required_skills(jd_text)
+
+    required_skills_list = [s.strip().lower() for s in required_skills.split(",")]
 
     results = []
 
-    for name, text in resume_texts:
+    for name,text in resume_texts:
 
-        resume_embedding = model.encode(text, convert_to_tensor=True)
+        resume_embedding = embedding_model.encode(text,convert_to_tensor=True)
 
-        semantic_score = util.cos_sim(jd_embedding, resume_embedding).item()
+        semantic_score = util.cos_sim(jd_embedding,resume_embedding).item()
 
-        keyword_matches = sum(1 for k in jd_keywords if k in text.lower())
+        candidate_skills = extract_candidate_skills(text)
 
-        keyword_score = keyword_matches / len(jd_keywords) if jd_keywords else 0
+        candidate_skills_list = [s.strip().lower() for s in candidate_skills.split(",")]
 
-        total_score = (semantic_score * 0.7) + (keyword_score * 0.3)
+        skill_matches = len(set(required_skills_list) & set(candidate_skills_list))
 
-        results.append((name, text, round(total_score * 100, 2)))
+        skill_score = skill_matches / len(required_skills_list) if required_skills_list else 0
 
-    return sorted(results, key=lambda x: x[2], reverse=True)
+        experience = extract_experience(text)
 
-# ---------------------------------
+        try:
+            experience = float(experience)
+        except:
+            experience = 0
+
+        experience_score = min(experience/5,1)
+
+        final_score = (
+            semantic_score*0.4 +
+            skill_score*0.4 +
+            experience_score*0.2
+        )
+
+        results.append((name,text,round(final_score*100,2),experience))
+
+    return sorted(results,key=lambda x:x[2],reverse=True)
+
+# -----------------------------------
 # UI HEADER
-# ---------------------------------
+# -----------------------------------
 
 st.markdown("""
 <style>
@@ -211,13 +276,13 @@ font-size:30px;
 font-weight:bold;
 }
 </style>
-""", unsafe_allow_html=True)
+""",unsafe_allow_html=True)
 
-st.markdown("<div class='title'>📄 AI Resume Screener & JD Matcher</div>", unsafe_allow_html=True)
+st.markdown("<div class='title'>📄 AI Resume Screener & JD Matcher</div>",unsafe_allow_html=True)
 
-# ---------------------------------
+# -----------------------------------
 # SIDEBAR
-# ---------------------------------
+# -----------------------------------
 
 with st.sidebar:
 
@@ -229,11 +294,11 @@ with st.sidebar:
         accept_multiple_files=True
     )
 
-# ---------------------------------
+# -----------------------------------
 # MAIN LAYOUT
-# ---------------------------------
+# -----------------------------------
 
-col1, col2 = st.columns([1,2])
+col1,col2 = st.columns([1,2])
 
 with col1:
 
@@ -252,35 +317,35 @@ with col2:
 
         if not resume_files or not jd_input.strip():
 
-            st.warning("Please upload resumes and enter job description.")
+            st.warning("Upload resumes and provide JD")
 
         else:
 
             with st.spinner("Analyzing resumes..."):
 
-                resume_texts = []
+                resume_texts=[]
 
                 for uploaded_file in resume_files:
 
-                    ext = os.path.splitext(uploaded_file.name)[1]
+                    ext=os.path.splitext(uploaded_file.name)[1]
 
-                    temp_file = uploaded_file.name
+                    temp_file=uploaded_file.name
 
                     with open(temp_file,"wb") as f:
                         f.write(uploaded_file.read())
 
-                    if ext == ".pdf":
-                        text = extract_text_from_pdf(temp_file)
+                    if ext==".pdf":
+                        text=extract_text_from_pdf(temp_file)
                     else:
-                        text = extract_text_from_docx(temp_file)
+                        text=extract_text_from_docx(temp_file)
 
                     resume_texts.append((uploaded_file.name,text))
 
                     os.remove(temp_file)
 
-                results = compute_similarity(resume_texts,jd_input)
+                results=compute_similarity(resume_texts,jd_input)
 
-                df = pd.DataFrame(
+                df=pd.DataFrame(
                     [(i+1,r[0],r[2]) for i,r in enumerate(results)],
                     columns=["Rank","Candidate Name","Match Score %"]
                 )
@@ -297,17 +362,18 @@ with col2:
 
                 st.header("Candidate Analysis")
 
-                for rank,(name,text,score) in enumerate(results,1):
+                for rank,(name,text,score,experience) in enumerate(results,1):
 
                     st.subheader(f"{rank}. {name}")
 
                     st.write(f"Match Score: {score}%")
+                    st.write(f"Estimated Experience: {experience} years")
 
                     with st.spinner("Running AI analysis..."):
 
-                        summary = generate_candidate_summary(text)
-                        gap = skill_gap_analysis(jd_input,text)
-                        questions = generate_interview_questions(jd_input,text)
+                        summary=generate_candidate_summary(text)
+                        gap=skill_gap_analysis(jd_input,text)
+                        questions=generate_interview_questions(jd_input,text,experience)
 
                     st.markdown("### Candidate Summary")
                     st.info(summary)
