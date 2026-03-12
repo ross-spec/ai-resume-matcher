@@ -16,18 +16,27 @@ st.set_page_config(
     layout="wide"
 )
 
+# ------------------------------------------------
+# TITLE
+# ------------------------------------------------
+
 st.title("HireAI – Smart Resume Screening")
 
-# ------------------------------------------------
-# SESSION STATE
-# ------------------------------------------------
+st.markdown(
+"""
+### AI Resume Screening & Candidate Ranking
 
-if "analysis_done" not in st.session_state:
-    st.session_state.analysis_done = False
+Upload resumes and paste a job description to instantly:
 
+• Rank candidates based on AI matching  
+• Extract important candidate skills  
+• Generate interview questions  
+• Get hiring recommendations
+"""
+)
 
 # ------------------------------------------------
-# CSS (WHITE BACKGROUND OPTIMIZED)
+# CSS (WHITE UI)
 # ------------------------------------------------
 
 st.markdown("""
@@ -78,7 +87,6 @@ padding:20px;
 border-radius:10px;
 border:1px solid #e5e7eb;
 margin-bottom:15px;
-color:#111111;
 box-shadow:0 2px 6px rgba(0,0,0,0.05);
 }
 
@@ -250,13 +258,13 @@ Hiring recommendation
 # LAYOUT
 # ------------------------------------------------
 
-main,panel=st.columns([3,1])
+left,right = st.columns([3,1])
 
 # ------------------------------------------------
 # RIGHT PANEL
 # ------------------------------------------------
 
-with panel:
+with right:
 
     st.markdown('<div class="panel">',unsafe_allow_html=True)
 
@@ -272,7 +280,10 @@ with panel:
 
     st.markdown('<div class="section-header">Job Description</div>',unsafe_allow_html=True)
 
-    jd_input=st.text_area("Paste job description",height=200)
+    jd_input=st.text_area(
+        "Paste job description",
+        height=200
+    )
 
     analyze=st.button("Analyze Candidates")
 
@@ -282,11 +293,9 @@ with panel:
 # RESULTS
 # ------------------------------------------------
 
-with main:
+with left:
 
     if analyze:
-
-        st.session_state.analysis_done=True
 
         if not resume_files or not jd_input:
 
@@ -312,6 +321,8 @@ with main:
                 results=compute_similarity(resume_texts,jd_input)
 
                 questions=generate_questions(jd_input)
+
+            # ranking table
 
             df=pd.DataFrame(
                 [(i+1,r[0],r[2]) for i,r in enumerate(results)],
