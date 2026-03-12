@@ -26,7 +26,7 @@ MODEL = "mistralai/mistral-7b-instruct:free"
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # -----------------------------
-# AI CALL FUNCTION
+# AI CALL
 # -----------------------------
 
 def call_ai(prompt):
@@ -46,14 +46,14 @@ def call_ai(prompt):
     response = requests.post(API_URL, headers=headers, data=json.dumps(body))
 
     if response.status_code != 200:
-        return "AI API Error"
+        return "AI Error"
 
     result = response.json()
 
     return result["choices"][0]["message"]["content"]
 
 # -----------------------------
-# TEXT EXTRACTION
+# FILE TEXT EXTRACTION
 # -----------------------------
 
 def extract_text_from_pdf(path):
@@ -91,17 +91,19 @@ def extract_keywords(text):
     return list(freq.head(20).index)
 
 # -----------------------------
-# AI FUNCTIONS
+# AI ANALYSIS FUNCTIONS
 # -----------------------------
 
 def generate_candidate_summary(resume_text):
 
     prompt = f"""
-    Analyze the resume and provide:
+    Analyze this resume.
 
-    Candidate role
-    Years of experience
-    Key technical skills
+    Provide:
+
+    Candidate Role
+    Years of Experience
+    Key Skills
     Strengths
 
     Resume:
@@ -135,7 +137,7 @@ def skill_gap_analysis(jd_text, resume_text):
 def generate_interview_questions(jd_text, resume_text):
 
     prompt = f"""
-    Generate 5 technical interview questions based on the job description and resume.
+    Generate 5 interview questions based on this resume and job description.
 
     Job Description:
     {jd_text[:1500]}
@@ -147,7 +149,7 @@ def generate_interview_questions(jd_text, resume_text):
     return call_ai(prompt)
 
 # -----------------------------
-# MATCHING FUNCTION
+# RESUME MATCHING
 # -----------------------------
 
 def compute_similarity(resume_texts, jd_text):
@@ -160,12 +162,6 @@ def compute_similarity(resume_texts, jd_text):
 
     for name, text in resume_texts:
 
-        if not text.strip():
-
-            results.append((name, 0))
-
-            continue
-
         resume_embedding = model.encode(text, convert_to_tensor=True)
 
         semantic_score = util.cos_sim(jd_embedding, resume_embedding).item()
@@ -176,12 +172,12 @@ def compute_similarity(resume_texts, jd_text):
 
         total_score = (semantic_score * 0.7) + (keyword_score * 0.3)
 
-        results.append((name, round(total_score * 100, 2)))
+        results.append((name, text, round(total_score * 100, 2)))
 
-    return sorted(results, key=lambda x: x[1], reverse=True)
+    return sorted(results, key=lambda x: x[2], reverse=True)
 
 # -----------------------------
-# UI HEADER
+# UI
 # -----------------------------
 
 st.markdown("""
@@ -198,7 +194,7 @@ font-weight:bold;
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div class='title'>📄 AI Resume Screener & JD Matcher</div>", unsafe_allow_html=True)
+st.markdown("<div class='title'>AI Resume Screener & JD Matcher</div>", unsafe_allow_html=True)
 
 # -----------------------------
 # SIDEBAR
@@ -209,7 +205,7 @@ with st.sidebar:
     st.header("Upload Resumes")
 
     resume_files = st.file_uploader(
-        "Upload Resume Files",
+        "Upload PDF or DOCX",
         type=["pdf","docx"],
         accept_multiple_files=True
     )
@@ -218,7 +214,7 @@ with st.sidebar:
 # MAIN LAYOUT
 # -----------------------------
 
-col1,col2 = st.columns([1,2])
+col1, col2 = st.columns([1,2])
 
 with col1:
 
@@ -231,13 +227,13 @@ with col1:
 
 with col2:
 
-    st.subheader("Matching Results")
+    st.subheader("Resume Ranking")
 
-    if st.button("Match Resumes"):
+    if st.button("Analyze Resumes"):
 
         if not resume_files or not jd_input.strip():
 
-            st.warning("Please upload resumes and enter job description.")
+            st.warning("Upload resumes and provide JD")
 
         else:
 
@@ -267,79 +263,47 @@ with col2:
 
                     os.remove(temp_file)
 
-                scores = compute_similarity(resume_texts,jd_input)
+                results = compute_similarity(resume_texts,jd_input)
 
-                st.success("Matching Complete")
-
-                df = pd.DataFrame(scores, columns=["Candidate Name","Match Score (%)"])
-
-                df.index = df.index + 1
+                df = pd.DataFrame(
+                    [(i+1,r[0],r[2]) for i,r in enumerate(results)],
+                    columns=["Rank","Candidate Name","Match Score %"]
+                )
 
                 st.dataframe(df,use_container_width=True)
 
-                csv = df.to_csv(index=False).encode("utf-8")
-
                 st.download_button(
                     "Download Results",
-                    csv,
-                    "resume_results.csv",
-                    "text/csv"
+                    df.to_csv(index=False),
+                    "resume_results.csv"
                 )
 
                 st.markdown("---")
 
-                st.session_state["resume_texts"] = resume_texts
-                st.session_state["scores"] = scores
+                # -----------------------------
+                # AI ANALYSIS SECTIONS
+                # -----------------------------
 
-# -----------------------------
-# BUTTON ACTIONS
-# -----------------------------
+                st.header("Candidate Analysis")
 
-if "scores" in st.session_state:
+                for rank,(name,text,score) in enumerate(results,1):
 
-    scores = st.session_state["scores"]
-    resume_texts = st.session_state["resume_texts"]
+                    st.subheader(f"{rank}. {name}")
+                    st.write(f"Match Score: {score}%")
 
-    for i,(name,score) in enumerate(scores,1):
+                    with st.spinner("Generating AI analysis..."):
 
-        st.markdown(f"### {i}. {name}")
-        st.write(f"Match Score: {score}%")
+                        summary = generate_candidate_summary(text)
+                        gap = skill_gap_analysis(jd_input,text)
+                        questions = generate_interview_questions(jd_input,text)
 
-        resume_text = next(t for f,t in resume_texts if f==name)
+                    st.markdown("### Candidate Summary")
+                    st.info(summary)
 
-        colA,colB,colC = st.columns(3)
+                    st.markdown("### Skill Gap")
+                    st.warning(gap)
 
-        with colA:
+                    st.markdown("### Interview Questions")
+                    st.success(questions)
 
-            if st.button("AI Summary", key=f"summary_{i}"):
-
-                with st.spinner("Generating summary..."):
-                    st.session_state[f"summary_{i}"] = generate_candidate_summary(resume_text)
-
-        if f"summary_{i}" in st.session_state:
-
-            st.write(st.session_state[f"summary_{i}"])
-
-
-        with colB:
-
-            if st.button("Skill Gap", key=f"gap_{i}"):
-
-                with st.spinner("Analyzing skill gap..."):
-                    st.session_state[f"gap_{i}"] = skill_gap_analysis(jd_input,resume_text)
-
-        if f"gap_{i}" in st.session_state:
-
-            st.write(st.session_state[f"gap_{i}"])
-
-
-        with colC:
-
-            if st.button("Interview Questions", key=f"question_{i}"):
-
-                with st.spinner("Generating questions..."):
-                    st.session_state[f"question_{i}"] = generate_interview_questions(jd_input,resume_text)
-
-        if f"question_{i}" in st.session_state:
-
-            st.write(st.session_state[f"question_{i}"])
+                    st.markdown("---")
