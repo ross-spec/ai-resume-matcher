@@ -88,24 +88,26 @@ p,label{
 color:#e6e6e6;
 }
 
-/* STRONG BUTTON STYLE OVERRIDE */
+/* FIX BUTTON TEXT COLOR */
 
-div.stButton > button {
-background-color:white !important;
+button[kind="secondary"] {
 color:black !important;
 font-weight:700 !important;
-border-radius:8px;
-border:none;
 }
 
-/* File uploader browse button */
+button[kind="primary"] {
+color:black !important;
+font-weight:700 !important;
+}
+
+/* Browse Files Button */
 
 [data-testid="stFileUploader"] button {
 color:black !important;
 font-weight:700 !important;
 }
 
-/* Upload panel */
+/* Upload Panel */
 
 .panel{
 background:rgba(7,28,44,0.9);
@@ -113,7 +115,7 @@ padding:25px;
 border-radius:12px;
 }
 
-/* Result cards */
+/* Result Cards */
 
 .result-card{
 background:rgba(7,28,44,0.95);
