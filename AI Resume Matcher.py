@@ -69,13 +69,26 @@ set_background(not st.session_state.analysis_done)
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT HEADER */
+/* REMOVE STREAMLIT HEADER + TOOLBAR */
 
-header[data-testid="stHeader"]{
+header {
+visibility:hidden;
+height:0px;
+}
+
+[data-testid="stToolbar"]{
 display:none;
 }
 
-/* PAGE LAYOUT */
+[data-testid="stDecoration"]{
+display:none;
+}
+
+[data-testid="stStatusWidget"]{
+display:none;
+}
+
+/* REMOVE TOP SPACING */
 
 .block-container{
 padding-top:0rem;
@@ -96,7 +109,7 @@ p,label{
 color:#e6e6e6;
 }
 
-/* PANEL */
+/* RIGHT PANEL */
 
 .panel{
 background:rgba(7,28,44,0.80);
@@ -141,10 +154,7 @@ font-size:16px !important;
 
 .stButton > button:hover {
 background:#0099cc !important;
-color:black !important;
 }
-
-/* DISABLED BUTTON */
 
 .stButton > button:disabled {
 background:#8fd3ff !important;
