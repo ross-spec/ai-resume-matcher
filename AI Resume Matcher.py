@@ -3,9 +3,9 @@ import base64
 import pandas as pd
 from pathlib import Path
 
-# ---------------------------------------------
+# ------------------------------------------------
 # PAGE CONFIG
-# ---------------------------------------------
+# ------------------------------------------------
 
 st.set_page_config(
     page_title="AI Resume Screener",
@@ -13,33 +13,38 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------------------------------------
-# BACKGROUND IMAGE FUNCTION
-# ---------------------------------------------
+# ------------------------------------------------
+# BACKGROUND IMAGE
+# ------------------------------------------------
 
-def set_background(image_file):
+def set_background():
 
-    image_path = Path(image_file)
+    image_path = Path(__file__).parent / "background.png"
 
-    if image_path.exists():
+    with open(image_path, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode()
 
-        with open(image_path, "rb") as f:
-            encoded = base64.b64encode(f.read()).decode()
-
-        css = f"""
+    st.markdown(
+        f"""
         <style>
 
         [data-testid="stAppViewContainer"] {{
-            background:
-            linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
+            background-image:
+            linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
             url("data:image/png;base64,{encoded}");
             background-size: cover;
             background-position: center;
+            background-repeat: no-repeat;
             background-attachment: fixed;
         }}
 
         [data-testid="stHeader"] {{
             background: rgba(0,0,0,0);
+        }}
+
+        section[data-testid="stSidebar"] {{
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(10px);
         }}
 
         #MainMenu {{visibility:hidden;}}
@@ -97,25 +102,22 @@ def set_background(image_file):
         }}
 
         </style>
-        """
+        """,
+        unsafe_allow_html=True
+    )
 
-        st.markdown(css, unsafe_allow_html=True)
+set_background()
 
-    else:
-        st.error("Background image not found")
-
-# APPLY BACKGROUND
-set_background("background.png")
-
-# ---------------------------------------------
+# ------------------------------------------------
 # HERO SECTION
-# ---------------------------------------------
+# ------------------------------------------------
 
 st.markdown(
 """
 <div class="hero-title">
 AI Resume Screener & Candidate Ranking
 </div>
+
 <div class="hero-subtitle">
 Analyze resumes, detect skills, and rank candidates using AI
 </div>
@@ -123,9 +125,9 @@ Analyze resumes, detect skills, and rank candidates using AI
 unsafe_allow_html=True
 )
 
-# ---------------------------------------------
+# ------------------------------------------------
 # SIDEBAR
-# ---------------------------------------------
+# ------------------------------------------------
 
 with st.sidebar:
 
@@ -148,9 +150,9 @@ with st.sidebar:
 
     analyze = st.button("Analyze Candidates")
 
-# ---------------------------------------------
-# MOCK LOGIC (Replace with your AI logic)
-# ---------------------------------------------
+# ------------------------------------------------
+# MOCK FUNCTIONS (Replace with AI logic)
+# ------------------------------------------------
 
 def compute_similarity(resumes, jd):
 
@@ -159,7 +161,6 @@ def compute_similarity(resumes, jd):
     for i,file in enumerate(resumes):
 
         score = 75 + (i*5)
-
         experience = 2 + i
 
         results.append((file.name,score,experience))
@@ -170,24 +171,24 @@ def compute_similarity(resumes, jd):
 def generate_interview_questions(jd):
 
     return """
-1. Explain the star schema used in Power BI data modeling.
+1. Explain star schema in Power BI.
 
-2. What is the difference between calculated columns and measures?
+2. Difference between calculated columns and measures.
 
-3. How do you optimize Power BI reports for large datasets?
+3. How do you optimize Power BI dashboards?
 
-4. Explain how row-level security works in Power BI.
+4. Explain row-level security in Power BI.
 
-5. How would you design a data model for sales performance analytics?
+5. Describe how you would design a data model for sales reporting.
 
-6. How do you handle incremental refresh in Power BI?
+6. What strategies do you use for handling large datasets?
 
-7. Describe a challenging BI dashboard you have built.
+7. Explain incremental refresh in Power BI.
 """
 
-# ---------------------------------------------
+# ------------------------------------------------
 # MAIN APPLICATION
-# ---------------------------------------------
+# ------------------------------------------------
 
 if analyze:
 
@@ -199,9 +200,9 @@ if analyze:
 
         results = compute_similarity(resume_files,jd_input)
 
-        # ---------------------------
+        # -----------------------------------------
         # INTERVIEW QUESTIONS
-        # ---------------------------
+        # -----------------------------------------
 
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
 
@@ -213,9 +214,9 @@ if analyze:
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ---------------------------
+        # -----------------------------------------
         # RANKING TABLE
-        # ---------------------------
+        # -----------------------------------------
 
         df = pd.DataFrame(
             [(i+1,r[0],r[1]) for i,r in enumerate(results)],
@@ -230,9 +231,9 @@ if analyze:
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # ---------------------------
+        # -----------------------------------------
         # CANDIDATE ANALYSIS
-        # ---------------------------
+        # -----------------------------------------
 
         st.subheader("Candidate Analysis")
 
@@ -243,20 +244,19 @@ if analyze:
             st.markdown(f"### {i}. {name}")
 
             st.write(f"Match Score: **{score}%**")
-
             st.write(f"Estimated Experience: **{experience} years**")
 
             st.markdown("**Candidate Summary**")
 
             st.write(
-            "Experienced Power BI developer with strong expertise in SQL, "
-            "DAX calculations, dashboard development and data modeling."
+            "Experienced Power BI developer with expertise in SQL, DAX, "
+            "data modeling, and interactive dashboard creation."
             )
 
             st.markdown("**Skill Gap**")
 
             st.write(
-            "Azure Data Factory, Databricks, Advanced Data Engineering."
+            "Azure Data Factory, Databricks, advanced data engineering."
             )
 
             st.markdown('</div>', unsafe_allow_html=True)
