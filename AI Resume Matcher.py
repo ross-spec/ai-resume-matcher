@@ -12,10 +12,12 @@ from sentence_transformers import SentenceTransformer, util
 # ------------------------------------------------
 
 st.set_page_config(
-    page_title="AI Resume Screener",
+    page_title="HireAI Resume Screener",
     page_icon="📄",
     layout="wide"
 )
+
+st.title("HireAI – Smart Resume Screening")
 
 # ------------------------------------------------
 # SESSION STATE
@@ -27,14 +29,14 @@ if "analysis_done" not in st.session_state:
 BASE_COLOR = "#071c2c"
 
 # ------------------------------------------------
-# BACKGROUND CONTROL
+# BACKGROUND
 # ------------------------------------------------
 
 def set_background(show_image=True):
 
     if show_image:
 
-        with open("background.png", "rb") as f:
+        with open("background.png","rb") as f:
             encoded = base64.b64encode(f.read()).decode()
 
         st.markdown(f"""
@@ -47,7 +49,7 @@ def set_background(show_image=True):
         background-color:{BASE_COLOR};
         }}
         </style>
-        """, unsafe_allow_html=True)
+        """,unsafe_allow_html=True)
 
     else:
 
@@ -58,108 +60,37 @@ def set_background(show_image=True):
         background-image:none;
         }}
         </style>
-        """, unsafe_allow_html=True)
+        """,unsafe_allow_html=True)
 
 set_background(not st.session_state.analysis_done)
 
 # ------------------------------------------------
-# GLOBAL CSS
+# CSS
 # ------------------------------------------------
 
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT HEADER / TOOLBAR */
-
-header {display:none !important;}
-
-[data-testid="stHeader"]{display:none !important;}
-
-[data-testid="stToolbar"]{display:none !important;}
-
-[data-testid="stDecoration"]{display:none !important;}
-
-[data-testid="stStatusWidget"]{display:none !important;}
+header {display:none;}
 
 .block-container{
-padding-top:0rem !important;
+padding-top:0rem;
 max-width:100%;
 }
 
-/* TEXT */
-
-p,label{
-color:#e6e6e6;
-}
-
-/* MAIN HEADINGS */
-
-h1,h2,h3{
-color:white;
-}
-
-/* RIGHT PANEL */
-
 .panel{
-background:rgba(7,28,44,0.82);
+background:rgba(7,28,44,0.85);
 padding:25px;
-border-radius:14px;
-backdrop-filter: blur(8px);
-box-shadow:0 0 15px rgba(0,191,255,0.2);
+border-radius:12px;
 }
-
-/* SECTION HEADERS */
 
 .section-header{
 background:linear-gradient(90deg,#00bfff,#0080ff);
-padding:10px 16px;
+padding:10px;
 border-radius:8px;
 color:white;
 font-weight:700;
-font-size:20px;
-margin-bottom:6px;
 }
-
-/* SUB TEXT */
-
-.section-sub{
-color:#e0f7ff;
-font-size:14px;
-margin-bottom:12px;
-}
-
-/* BUTTON */
-
-.stButton > button {
-background:#00bfff !important;
-color:black !important;
-font-weight:700 !important;
-border-radius:10px !important;
-border:none !important;
-padding:10px 20px !important;
-font-size:16px !important;
-}
-
-.stButton > button:hover {
-background:#0099cc !important;
-}
-
-/* DISABLED BUTTON */
-
-.stButton > button:disabled {
-background:#8fd3ff !important;
-color:black !important;
-opacity:1 !important;
-}
-
-/* FILE UPLOAD BUTTON */
-
-[data-testid="stFileUploader"] button{
-color:black !important;
-font-weight:700 !important;
-}
-
-/* RESULT CARDS */
 
 .result-card{
 background:rgba(7,28,44,0.95);
@@ -169,16 +100,25 @@ margin-bottom:15px;
 color:white;
 }
 
+.stButton > button {
+background:#00bfff;
+color:black;
+font-weight:700;
+border-radius:8px;
+}
+
 </style>
-""", unsafe_allow_html=True)
+""",unsafe_allow_html=True)
 
 # ------------------------------------------------
 # AI CONFIG
 # ------------------------------------------------
 
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
-MODEL = "openai/gpt-4o-mini"
-API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+MODEL="openai/gpt-4o-mini"
+
+API_URL="https://openrouter.ai/api/v1/chat/completions"
 
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -188,23 +128,23 @@ embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 def call_ai(prompt):
 
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json"
+    headers={
+        "Authorization":f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type":"application/json"
     }
 
-    payload = {
-        "model": MODEL,
-        "messages": [{"role":"user","content":prompt}],
+    payload={
+        "model":MODEL,
+        "messages":[{"role":"user","content":prompt}],
         "temperature":0.2
     }
 
-    response = requests.post(API_URL, headers=headers, json=payload)
+    r=requests.post(API_URL,headers=headers,json=payload)
 
-    if response.status_code != 200:
+    if r.status_code!=200:
         return "AI Error"
 
-    return response.json()["choices"][0]["message"]["content"]
+    return r.json()["choices"][0]["message"]["content"]
 
 # ------------------------------------------------
 # FILE TEXT EXTRACTION
@@ -212,7 +152,8 @@ def call_ai(prompt):
 
 def extract_text_from_pdf(file):
 
-    reader = PyPDF2.PdfReader(file)
+    reader=PyPDF2.PdfReader(file)
+
     text=""
 
     for page in reader.pages:
@@ -226,24 +167,41 @@ def extract_text_from_docx(file):
     return docx2txt.process(file)
 
 # ------------------------------------------------
+# SKILL EXTRACTION
+# ------------------------------------------------
+
+def extract_skills(resume_text):
+
+    prompt=f"""
+Extract top professional skills from this resume.
+
+Return a simple bullet list.
+
+Resume:
+{resume_text[:2000]}
+"""
+
+    return call_ai(prompt)
+
+# ------------------------------------------------
 # RESUME MATCHING
 # ------------------------------------------------
 
-def compute_similarity(resume_texts, jd_text):
+def compute_similarity(resume_texts,jd_text):
 
-    jd_embedding = embedding_model.encode(jd_text, convert_to_tensor=True)
+    jd_embedding=embedding_model.encode(jd_text,convert_to_tensor=True)
 
     results=[]
 
     for name,text in resume_texts:
 
-        resume_embedding = embedding_model.encode(text, convert_to_tensor=True)
+        resume_embedding=embedding_model.encode(text,convert_to_tensor=True)
 
-        score = util.cos_sim(jd_embedding,resume_embedding).item()
+        score=util.cos_sim(jd_embedding,resume_embedding).item()
 
-        score = round(score*100,2)
+        score=round(score*100,2)
 
-        experience = 3
+        experience=3
 
         results.append((name,text,score,experience))
 
@@ -296,7 +254,7 @@ Hiring recommendation
 # LAYOUT
 # ------------------------------------------------
 
-main, panel = st.columns([3,1])
+main,panel=st.columns([3,1])
 
 # ------------------------------------------------
 # RIGHT PANEL
@@ -304,72 +262,62 @@ main, panel = st.columns([3,1])
 
 with panel:
 
-    st.markdown('<div class="panel">', unsafe_allow_html=True)
+    st.markdown('<div class="panel">',unsafe_allow_html=True)
 
-    st.markdown('<div class="section-header">Upload Resumes</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Upload PDF or DOCX resumes</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Upload Resumes</div>',unsafe_allow_html=True)
 
-    resume_files = st.file_uploader(
-        "",
+    resume_files=st.file_uploader(
+        "Upload PDF or DOCX resumes",
         type=["pdf","docx"],
         accept_multiple_files=True
     )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("---")
 
-    st.markdown('<div class="section-header">Job Description</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">Paste job description</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Job Description</div>',unsafe_allow_html=True)
 
-    jd_input = st.text_area("", height=200)
+    jd_input=st.text_area("Paste job description",height=200)
 
-    analyze = st.button("Analyze Candidates")
+    analyze=st.button("Analyze Candidates")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>',unsafe_allow_html=True)
 
 # ------------------------------------------------
-# RESULTS SECTION
+# RESULTS
 # ------------------------------------------------
 
 with main:
 
     if analyze:
 
-        st.session_state.analysis_done = True
+        st.session_state.analysis_done=True
 
         if not resume_files or not jd_input:
 
-            st.warning("Please upload resumes and provide job description")
+            st.warning("Upload resumes and provide job description")
 
         else:
 
-            resume_texts=[]
+            with st.spinner("Analyzing resumes with AI..."):
 
-            for file in resume_files:
+                resume_texts=[]
 
-                ext=os.path.splitext(file.name)[1]
+                for file in resume_files:
 
-                if ext==".pdf":
-                    text=extract_text_from_pdf(file)
-                else:
-                    text=extract_text_from_docx(file)
+                    ext=os.path.splitext(file.name)[1]
 
-                resume_texts.append((file.name,text))
+                    if ext==".pdf":
+                        text=extract_text_from_pdf(file)
+                    else:
+                        text=extract_text_from_docx(file)
 
-            results=compute_similarity(resume_texts,jd_input)
+                    resume_texts.append((file.name,text))
 
-            questions=generate_questions(jd_input)
+                results=compute_similarity(resume_texts,jd_input)
 
-            recommendation=generate_recommendation(
-                jd_input,
-                results[0][1],
-                results[0][2]
-            )
+                questions=generate_questions(jd_input)
 
-            st.subheader("Interview Questions")
-            st.write(questions)
-
-            st.subheader("AI Hiring Recommendation")
-            st.write(recommendation)
+            # ranking dataframe
 
             df=pd.DataFrame(
                 [(i+1,r[0],r[2]) for i,r in enumerate(results)],
@@ -377,7 +325,23 @@ with main:
             )
 
             st.subheader("Candidate Ranking")
+
             st.dataframe(df,use_container_width=True)
+
+            # download results
+
+            csv=df.to_csv(index=False).encode("utf-8")
+
+            st.download_button(
+                "Download Ranking CSV",
+                csv,
+                "candidate_ranking.csv",
+                "text/csv"
+            )
+
+            st.subheader("Interview Questions")
+
+            st.write(questions)
 
             st.subheader("Candidate Analysis")
 
@@ -386,7 +350,23 @@ with main:
                 st.markdown('<div class="result-card">',unsafe_allow_html=True)
 
                 st.markdown(f"### {rank}. {name}")
+
                 st.write(f"Match Score: {score}%")
+
+                st.progress(score/100)
+
                 st.write(f"Estimated Experience: {exp} years")
 
-                st.markdown("</div>", unsafe_allow_html=True)
+                skills=extract_skills(text)
+
+                st.write("Top Skills:")
+
+                st.write(skills)
+
+                recommendation=generate_recommendation(jd_input,text,score)
+
+                st.write("AI Recommendation")
+
+                st.write(recommendation)
+
+                st.markdown("</div>",unsafe_allow_html=True)
