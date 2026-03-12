@@ -76,6 +76,8 @@ padding-right:2rem;
 max-width:100%;
 }
 
+/* HEADINGS */
+
 h1,h2,h3{
 color:white;
 }
@@ -84,34 +86,48 @@ p,label{
 color:#e6e6e6;
 }
 
-/* ANALYZE BUTTON STYLE */
+/* PANEL HEADER FIX (UPLOAD + JOB DESCRIPTION) */
 
-.stButton > button {
-background: #00bfff !important;
-color: black !important;
-font-weight: 700 !important;
-border-radius: 10px !important;
-border: none !important;
-padding: 10px 20px !important;
-font-size: 16px !important;
+.panel h2{
+background: rgba(7,28,44,0.85);
+padding:10px 15px;
+border-radius:8px;
+color:#ffffff !important;
+font-weight:700;
+letter-spacing:0.5px;
 }
 
-/* HOVER */
+.panel label{
+color:#ffffff !important;
+font-weight:600;
+}
+
+/* ANALYZE BUTTON */
+
+.stButton > button {
+background:#00bfff !important;
+color:black !important;
+font-weight:700 !important;
+border-radius:10px !important;
+border:none !important;
+padding:10px 20px !important;
+font-size:16px !important;
+}
 
 .stButton > button:hover {
-background: #00a6e0 !important;
-color: black !important;
+background:#00a6e0 !important;
+color:black !important;
 }
 
 /* DISABLED BUTTON */
 
 .stButton > button:disabled {
-background: #8fd3ff !important;
-color: black !important;
-opacity: 1 !important;
+background:#8fd3ff !important;
+color:black !important;
+opacity:1 !important;
 }
 
-/* FILE UPLOAD BUTTON */
+/* FILE UPLOADER BUTTON */
 
 [data-testid="stFileUploader"] button{
 color:black !important;
@@ -121,9 +137,10 @@ font-weight:700 !important;
 /* RIGHT PANEL */
 
 .panel{
-background:rgba(7,28,44,0.92);
+background:rgba(7,28,44,0.85);
 padding:25px;
 border-radius:12px;
+backdrop-filter: blur(6px);
 }
 
 /* RESULT CARDS */
