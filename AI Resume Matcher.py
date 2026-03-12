@@ -7,9 +7,9 @@ import pandas as pd
 import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 
-# ---------------------------------
+# -----------------------------
 # PAGE CONFIG
-# ---------------------------------
+# -----------------------------
 
 st.set_page_config(
     page_title="AI Resume Screener",
@@ -17,21 +17,21 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------------------------
+# -----------------------------
 # OPENROUTER CONFIG
-# ---------------------------------
+# -----------------------------
 
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
 
-MODEL = "mistralai/mistral-7b-instruct:free"
+MODEL = "openchat/openchat-7b:free"
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# ---------------------------------
-# AI FUNCTION
-# ---------------------------------
+# -----------------------------
+# AI CALL FUNCTION
+# -----------------------------
 
 def call_ai(prompt):
 
@@ -42,32 +42,29 @@ def call_ai(prompt):
             "Content-Type": "application/json"
         }
 
-        data = {
+        payload = {
             "model": MODEL,
             "messages": [
                 {"role": "user", "content": prompt}
             ]
         }
 
-        response = requests.post(API_URL, headers=headers, json=data)
-
-        if response.status_code != 200:
-            return f"API Error: {response.text}"
+        response = requests.post(API_URL, headers=headers, json=payload)
 
         result = response.json()
 
         if "choices" in result:
             return result["choices"][0]["message"]["content"]
-        else:
-            return f"AI Error: {result}"
+
+        return f"AI Error: {result}"
 
     except Exception as e:
+
         return f"AI Exception: {str(e)}"
 
-
-# ---------------------------------
-# TEXT EXTRACTION
-# ---------------------------------
+# -----------------------------
+# FILE TEXT EXTRACTION
+# -----------------------------
 
 def extract_text_from_pdf(path):
 
@@ -79,10 +76,10 @@ def extract_text_from_pdf(path):
 
         for page in reader.pages:
 
-            page_text = page.extract_text()
+            txt = page.extract_text()
 
-            if page_text:
-                text += page_text
+            if txt:
+                text += txt
 
     return text
 
@@ -91,10 +88,9 @@ def extract_text_from_docx(path):
 
     return docx2txt.process(path)
 
-
-# ---------------------------------
+# -----------------------------
 # KEYWORD EXTRACTION
-# ---------------------------------
+# -----------------------------
 
 def extract_keywords(text):
 
@@ -104,10 +100,9 @@ def extract_keywords(text):
 
     return list(freq.head(20).index)
 
-
-# ---------------------------------
-# AI ANALYSIS FUNCTIONS
-# ---------------------------------
+# -----------------------------
+# AI FUNCTIONS
+# -----------------------------
 
 def generate_candidate_summary(resume_text):
 
@@ -115,9 +110,9 @@ def generate_candidate_summary(resume_text):
     Analyze this resume.
 
     Provide:
-    Candidate Role
-    Years of Experience
-    Key Skills
+    Candidate role
+    Years of experience
+    Key skills
     Strengths
 
     Resume:
@@ -161,10 +156,9 @@ def generate_interview_questions(jd_text, resume_text):
 
     return call_ai(prompt)
 
-
-# ---------------------------------
+# -----------------------------
 # RESUME MATCHING
-# ---------------------------------
+# -----------------------------
 
 def compute_similarity(resume_texts, jd_text):
 
@@ -190,10 +184,9 @@ def compute_similarity(resume_texts, jd_text):
 
     return sorted(results, key=lambda x: x[2], reverse=True)
 
-
-# ---------------------------------
+# -----------------------------
 # UI HEADER
-# ---------------------------------
+# -----------------------------
 
 st.markdown("""
 <style>
@@ -211,10 +204,9 @@ font-weight:bold;
 
 st.markdown("<div class='title'>📄 AI Resume Screener & JD Matcher</div>", unsafe_allow_html=True)
 
-
-# ---------------------------------
+# -----------------------------
 # SIDEBAR
-# ---------------------------------
+# -----------------------------
 
 with st.sidebar:
 
@@ -226,10 +218,9 @@ with st.sidebar:
         accept_multiple_files=True
     )
 
-
-# ---------------------------------
+# -----------------------------
 # MAIN LAYOUT
-# ---------------------------------
+# -----------------------------
 
 col1, col2 = st.columns([1,2])
 
@@ -241,7 +232,6 @@ with col1:
         "Paste Job Description",
         height=300
     )
-
 
 with col2:
 
