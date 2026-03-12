@@ -15,7 +15,7 @@ from sentence_transformers import SentenceTransformer, util
 st.set_page_config(
     page_title="AI Resume Screener",
     page_icon="📄",
-    layout="wide"
+    layout="wide",
 )
 
 # ------------------------------------------------
@@ -26,7 +26,7 @@ if "analysis_done" not in st.session_state:
     st.session_state.analysis_done = False
 
 # ------------------------------------------------
-# BACKGROUND CONTROL
+# BACKGROUND FUNCTION
 # ------------------------------------------------
 
 def set_background(show_image=True):
@@ -35,20 +35,20 @@ def set_background(show_image=True):
 
     if show_image:
 
-        image_file = Path("background.png")
+        image_path = "background.png"
 
-        with open(image_file, "rb") as f:
-            encoded = base64.b64encode(f.read()).decode()
+        with open(image_path, "rb") as img:
+            encoded = base64.b64encode(img.read()).decode()
 
         st.markdown(
             f"""
             <style>
 
-            [data-testid="stAppViewContainer"] {{
+            .stApp {{
                 background-color:{base_color};
                 background-image:url("data:image/png;base64,{encoded}");
-                background-position:85% center;
-                background-size:contain;
+                background-size:cover;
+                background-position:center;
                 background-repeat:no-repeat;
                 background-attachment:fixed;
             }}
@@ -64,7 +64,7 @@ def set_background(show_image=True):
             f"""
             <style>
 
-            [data-testid="stAppViewContainer"] {{
+            .stApp {{
                 background-color:{base_color};
                 background-image:none;
             }}
@@ -74,52 +74,54 @@ def set_background(show_image=True):
             unsafe_allow_html=True
         )
 
-# Apply background
-set_background(show_image=not st.session_state.analysis_done)
+set_background(not st.session_state.analysis_done)
 
 # ------------------------------------------------
-# GLOBAL CSS
+# GLOBAL UI STYLE
 # ------------------------------------------------
 
 st.markdown(
 """
 <style>
 
-.main {background:transparent;}
-
-.block-container {
-background:transparent;
-padding-top:3rem;
-max-width:1200px;
+.block-container{
+padding-top:0rem;
+padding-left:1rem;
+padding-right:1rem;
+max-width:100%;
 }
 
 section[data-testid="stSidebar"]{
-background:#071c2c;
-border-right:1px solid rgba(255,255,255,0.05);
+background:#061a29;
 }
 
-#MainMenu {visibility:hidden;}
-footer {visibility:hidden;}
-header {visibility:hidden;}
+h1,h2,h3,h4,h5,h6{
+color:white;
+}
 
-h1,h2,h3,h4,h5,h6{color:white;}
-p,span,div,label{color:#e6e6e6;}
+p,span,label{
+color:#e6e6e6;
+}
+
+.stButton>button{
+background:#ffffff;
+color:black;
+font-weight:bold;
+border-radius:8px;
+}
 
 .section-card{
-background:rgba(7,28,44,0.85);
+background:rgba(7,28,44,0.9);
 padding:25px;
 border-radius:15px;
 margin-bottom:30px;
-border:1px solid rgba(255,255,255,0.05);
 }
 
 .result-card{
-background:rgba(7,28,44,0.92);
+background:rgba(7,28,44,0.95);
 padding:20px;
 border-radius:10px;
 margin-bottom:20px;
-color:white;
-border:1px solid rgba(255,255,255,0.05);
 }
 
 </style>
@@ -132,13 +134,15 @@ unsafe_allow_html=True
 # ------------------------------------------------
 
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
+
 MODEL = "openai/gpt-4o-mini"
+
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # ------------------------------------------------
-# AI CALL
+# AI CALL FUNCTION
 # ------------------------------------------------
 
 def call_ai(prompt):
@@ -150,8 +154,8 @@ def call_ai(prompt):
 
     payload = {
         "model": MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.2
+        "messages": [{"role":"user","content":prompt}],
+        "temperature":0.2
     }
 
     response = requests.post(API_URL, headers=headers, json=payload)
@@ -162,12 +166,13 @@ def call_ai(prompt):
     return response.json()["choices"][0]["message"]["content"]
 
 # ------------------------------------------------
-# FILE TEXT EXTRACTION
+# FILE EXTRACTION
 # ------------------------------------------------
 
 def extract_text_from_pdf(file):
 
     reader = PyPDF2.PdfReader(file)
+
     text=""
 
     for page in reader.pages:
@@ -177,10 +182,11 @@ def extract_text_from_pdf(file):
 
 
 def extract_text_from_docx(file):
+
     return docx2txt.process(file)
 
 # ------------------------------------------------
-# RESUME MATCHING
+# RESUME SCORING
 # ------------------------------------------------
 
 def compute_similarity(resume_texts, jd_text):
@@ -204,23 +210,20 @@ def compute_similarity(resume_texts, jd_text):
     return sorted(results,key=lambda x:x[2],reverse=True)
 
 # ------------------------------------------------
-# INTERVIEW QUESTIONS (JD ONLY)
+# INTERVIEW QUESTIONS
 # ------------------------------------------------
 
 def generate_interview_questions(jd_text):
 
-    prompt = f"""
-Generate 10 interview questions based ONLY on the following Job Description.
+    prompt=f"""
+Create 10 interview questions strictly based on this job description.
 
-Focus on:
-• technical skills
-• real-world scenarios
-• tools mentioned
+Focus on skills and tools mentioned.
 
 Job Description:
 {jd_text}
 
-Return only numbered questions.
+Return numbered questions only.
 """
 
     return call_ai(prompt)
@@ -229,24 +232,25 @@ Return only numbered questions.
 # AI RECOMMENDATION
 # ------------------------------------------------
 
-def generate_recommendation(jd_text,resume_text,score):
+def generate_recommendation(jd,resume,score):
 
-    prompt = f"""
-Based on the resume and job description provide a hiring recommendation.
+    prompt=f"""
+Analyze candidate suitability.
 
-Candidate Score: {score}%
+Candidate Score: {score}
 
 Job Description:
-{jd_text}
+{jd}
 
 Resume:
-{resume_text[:2000]}
+{resume[:2000]}
 
 Provide:
-• Candidate fit
-• Strengths
-• Missing skills
-• Hiring recommendation
+
+Candidate fit
+Strengths
+Missing skills
+Hiring recommendation
 """
 
     return call_ai(prompt)
@@ -277,7 +281,7 @@ with st.sidebar:
     analyze = st.button("Analyze Candidates")
 
 # ------------------------------------------------
-# MAIN APP
+# MAIN LOGIC
 # ------------------------------------------------
 
 if analyze:
@@ -286,7 +290,7 @@ if analyze:
 
     if not resume_files or not jd_input:
 
-        st.warning("Please upload resumes and provide job description")
+        st.warning("Please upload resumes and add job description")
 
     else:
 
@@ -307,15 +311,21 @@ if analyze:
 
         top_candidate=results[0]
 
+        questions=generate_interview_questions(jd_input)
+
+        recommendation=generate_recommendation(
+            jd_input,
+            top_candidate[1],
+            top_candidate[2]
+        )
+
         # ------------------------------------------------
         # INTERVIEW QUESTIONS
         # ------------------------------------------------
 
-        questions=generate_interview_questions(jd_input)
-
         st.markdown('<div class="section-card">',unsafe_allow_html=True)
 
-        st.subheader("Role-Based Interview Questions")
+        st.subheader("Interview Questions")
 
         st.write(questions)
 
@@ -324,12 +334,6 @@ if analyze:
         # ------------------------------------------------
         # AI RECOMMENDATION
         # ------------------------------------------------
-
-        recommendation=generate_recommendation(
-            jd_input,
-            top_candidate[1],
-            top_candidate[2]
-        )
 
         st.markdown('<div class="section-card">',unsafe_allow_html=True)
 
@@ -369,6 +373,7 @@ if analyze:
             st.markdown(f"### {rank}. {name}")
 
             st.write(f"Match Score: **{score}%**")
+
             st.write(f"Estimated Experience: **{experience} years**")
 
             st.markdown('</div>',unsafe_allow_html=True)
