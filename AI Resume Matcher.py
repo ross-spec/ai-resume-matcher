@@ -19,14 +19,14 @@ st.set_page_config(
 )
 
 # ------------------------------------------------
-# BACKGROUND IMAGE + CSS
+# BACKGROUND STYLE
 # ------------------------------------------------
 
 def set_background():
 
-    image_path = Path(__file__).parent / "background.png"
+    image_file = Path("background.png")
 
-    with open(image_path, "rb") as f:
+    with open(image_file, "rb") as f:
         encoded = base64.b64encode(f.read()).decode()
 
     st.markdown(
@@ -34,34 +34,37 @@ def set_background():
         <style>
 
         [data-testid="stAppViewContainer"] {{
-            background-image:
-            linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)),
+            background: linear-gradient(
+                to right,
+                #0a0a0a 0%,
+                #0a0a0a 35%,
+                transparent 35%
+            ),
             url("data:image/png;base64,{encoded}");
+
             background-size: cover;
-            background-position: center;
+            background-position: right center;
             background-repeat: no-repeat;
             background-attachment: fixed;
         }}
 
         .main {{
-            background: transparent !important;
+            background: transparent;
         }}
 
         .block-container {{
-            background: transparent !important;
-        }}
-
-        [data-testid="stHeader"] {{
-            background: rgba(0,0,0,0);
+            background: transparent;
+            padding-top: 2rem;
         }}
 
         section[data-testid="stSidebar"] {{
-            background: rgba(0,0,0,0.55);
-            backdrop-filter: blur(10px);
+            background: #0a0a0a;
+            border-right: 1px solid rgba(255,255,255,0.1);
         }}
 
         #MainMenu {{visibility:hidden;}}
         footer {{visibility:hidden;}}
+        header {{visibility:hidden;}}
 
         h1,h2,h3,h4,h5,h6 {{
             color:white;
@@ -69,21 +72,6 @@ def set_background():
 
         p,span,div,label {{
             color:#e6e6e6;
-        }}
-
-        .hero-title {{
-            text-align:center;
-            font-size:48px;
-            font-weight:700;
-            color:white;
-            margin-top:40px;
-        }}
-
-        .hero-subtitle {{
-            text-align:center;
-            font-size:20px;
-            color:#d0d0d0;
-            margin-bottom:40px;
         }}
 
         .section-card {{
@@ -109,11 +97,13 @@ def set_background():
 set_background()
 
 # ------------------------------------------------
-# OPENROUTER CONFIG
+# AI CONFIG
 # ------------------------------------------------
 
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
+
 MODEL = "openai/gpt-4o-mini"
+
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -165,7 +155,7 @@ def extract_text_from_docx(file):
     return docx2txt.process(file)
 
 # ------------------------------------------------
-# RESUME SCORING
+# RESUME SIMILARITY
 # ------------------------------------------------
 
 def compute_similarity(resume_texts, jd_text):
@@ -178,9 +168,9 @@ def compute_similarity(resume_texts, jd_text):
 
         resume_embedding = embedding_model.encode(text, convert_to_tensor=True)
 
-        semantic_score = util.cos_sim(jd_embedding, resume_embedding).item()
+        score = util.cos_sim(jd_embedding, resume_embedding).item()
 
-        score = round(semantic_score * 100, 2)
+        score = round(score * 100, 2)
 
         experience = 3
 
@@ -198,13 +188,13 @@ def generate_interview_questions(jd_text, resume_text, experience):
 You are a senior technical interviewer.
 
 Generate 7 interview questions based on BOTH the job description
-and the candidate's resume.
+and the candidate resume.
 
 Candidate Experience: {experience} years
 
-If experience < 2 years → beginner questions  
-If 2-5 years → intermediate questions  
-If >5 years → advanced questions
+If experience <2 → beginner
+2-5 → intermediate
+>5 → advanced
 
 Job Description:
 {jd_text}
@@ -212,27 +202,10 @@ Job Description:
 Candidate Resume:
 {resume_text[:2000]}
 
-Return only numbered questions.
+Return numbered questions only.
 """
 
     return call_ai(prompt)
-
-# ------------------------------------------------
-# HERO SECTION
-# ------------------------------------------------
-
-st.markdown(
-"""
-<div class="hero-title">
-AI Resume Screener & Candidate Ranking
-</div>
-
-<div class="hero-subtitle">
-Analyze resumes, detect skills, and rank candidates using AI
-</div>
-""",
-unsafe_allow_html=True
-)
 
 # ------------------------------------------------
 # SIDEBAR
@@ -301,7 +274,7 @@ if analyze:
 
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
 
-        st.subheader("Smart Interview Questions")
+        st.subheader("Interview Questions")
 
         st.write(f"For candidate: **{top_candidate[0]}**")
 
@@ -344,8 +317,7 @@ if analyze:
             st.write("Candidate Summary")
 
             st.write(
-            "Experienced BI professional with strong expertise in Power BI, "
-            "SQL, and data visualization."
+            "Experienced BI professional with strong expertise in Power BI, SQL, and data visualization."
             )
 
             st.markdown('</div>', unsafe_allow_html=True)
