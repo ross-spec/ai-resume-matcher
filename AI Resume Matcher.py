@@ -26,12 +26,12 @@ if "analysis_done" not in st.session_state:
     st.session_state.analysis_done = False
 
 # ------------------------------------------------
-# BACKGROUND IMAGE
+# BACKGROUND CONTROL
 # ------------------------------------------------
 
-def set_background(show_image=True):
+BASE_COLOR = "#071c2c"
 
-    base_color = "#071c2c"
+def set_background(show_image=True):
 
     if show_image:
 
@@ -43,11 +43,12 @@ def set_background(show_image=True):
             <style>
 
             .stApp {{
-                background-color:{base_color};
+                background-color:{BASE_COLOR};
                 background-image:url("data:image/png;base64,{encoded}");
                 background-size:cover;
                 background-position:center;
                 background-repeat:no-repeat;
+                background-attachment:fixed;
             }}
 
             </style>
@@ -62,7 +63,7 @@ def set_background(show_image=True):
             <style>
 
             .stApp {{
-                background:{base_color};
+                background-color:{BASE_COLOR};
                 background-image:none;
             }}
 
@@ -71,48 +72,50 @@ def set_background(show_image=True):
             unsafe_allow_html=True
         )
 
+# Apply background
 set_background(not st.session_state.analysis_done)
 
 # ------------------------------------------------
-# GLOBAL CSS
+# GLOBAL UI STYLE
 # ------------------------------------------------
 
 st.markdown(
-"""
+f"""
 <style>
 
-.block-container{
+.block-container {{
 padding-top:1rem;
 padding-left:3rem;
 padding-right:3rem;
-}
+}}
 
-h1,h2,h3{
+h1,h2,h3 {{
 color:white;
-}
+}}
 
-p,span,label{
+p,span,label {{
 color:#e6e6e6;
-}
+}}
 
-.panel{
-background:rgba(7,28,44,0.9);
+.panel {{
+background:{BASE_COLOR};
 padding:25px;
 border-radius:12px;
-}
+}}
 
-.result-box{
+.result-box {{
 background:rgba(7,28,44,0.95);
 padding:20px;
 border-radius:10px;
 margin-bottom:15px;
-}
+}}
 
-.stButton>button{
-background:white;
-color:black;
+.stButton>button {{
+background:white !important;
+color:black !important;
 font-weight:bold;
-}
+border-radius:8px;
+}}
 
 </style>
 """,
@@ -130,7 +133,7 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # ------------------------------------------------
-# AI CALL
+# AI CALL FUNCTION
 # ------------------------------------------------
 
 def call_ai(prompt):
@@ -142,8 +145,8 @@ def call_ai(prompt):
 
     payload = {
         "model": MODEL,
-        "messages": [{"role":"user","content":prompt}],
-        "temperature":0.2
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.2
     }
 
     response = requests.post(API_URL, headers=headers, json=payload)
@@ -154,17 +157,17 @@ def call_ai(prompt):
     return response.json()["choices"][0]["message"]["content"]
 
 # ------------------------------------------------
-# TEXT EXTRACTION
+# FILE TEXT EXTRACTION
 # ------------------------------------------------
 
 def extract_text_from_pdf(file):
 
     reader = PyPDF2.PdfReader(file)
 
-    text=""
+    text = ""
 
     for page in reader.pages:
-        text+=page.extract_text()
+        text += page.extract_text()
 
     return text
 
@@ -174,28 +177,28 @@ def extract_text_from_docx(file):
     return docx2txt.process(file)
 
 # ------------------------------------------------
-# RESUME MATCH
+# RESUME MATCHING
 # ------------------------------------------------
 
-def compute_similarity(resume_texts,jd_text):
+def compute_similarity(resume_texts, jd_text):
 
-    jd_embedding=embedding_model.encode(jd_text,convert_to_tensor=True)
+    jd_embedding = embedding_model.encode(jd_text, convert_to_tensor=True)
 
-    results=[]
+    results = []
 
-    for name,text in resume_texts:
+    for name, text in resume_texts:
 
-        resume_embedding=embedding_model.encode(text,convert_to_tensor=True)
+        resume_embedding = embedding_model.encode(text, convert_to_tensor=True)
 
-        score=util.cos_sim(jd_embedding,resume_embedding).item()
+        score = util.cos_sim(jd_embedding, resume_embedding).item()
 
-        score=round(score*100,2)
+        score = round(score * 100, 2)
 
-        experience=3
+        experience = 3
 
-        results.append((name,text,score,experience))
+        results.append((name, text, score, experience))
 
-    return sorted(results,key=lambda x:x[2],reverse=True)
+    return sorted(results, key=lambda x: x[2], reverse=True)
 
 # ------------------------------------------------
 # INTERVIEW QUESTIONS
@@ -203,13 +206,13 @@ def compute_similarity(resume_texts,jd_text):
 
 def generate_questions(jd):
 
-    prompt=f"""
+    prompt = f"""
 Generate 10 interview questions strictly based on this job description.
 
 Job Description:
 {jd}
 
-Return numbered list only.
+Return only numbered questions.
 """
 
     return call_ai(prompt)
@@ -218,12 +221,12 @@ Return numbered list only.
 # AI RECOMMENDATION
 # ------------------------------------------------
 
-def generate_recommendation(jd,resume,score):
+def generate_recommendation(jd, resume, score):
 
-    prompt=f"""
-Analyze candidate fit.
+    prompt = f"""
+Analyze candidate suitability.
 
-Score:{score}
+Score: {score}
 
 Job Description:
 {jd}
@@ -232,9 +235,8 @@ Resume:
 {resume[:2000]}
 
 Provide:
-
 Strengths
-Weaknesses
+Missing skills
 Hiring recommendation
 """
 
@@ -244,21 +246,21 @@ Hiring recommendation
 # LAYOUT
 # ------------------------------------------------
 
-left,right = st.columns([3,1])
+left, right = st.columns([3, 1])
 
 # ------------------------------------------------
-# RIGHT PANEL (UPLOAD SECTION)
+# RIGHT PANEL (UPLOAD)
 # ------------------------------------------------
 
 with right:
 
-    st.markdown('<div class="panel">',unsafe_allow_html=True)
+    st.markdown('<div class="panel">', unsafe_allow_html=True)
 
     st.header("Upload Resumes")
 
-    resume_files=st.file_uploader(
+    resume_files = st.file_uploader(
         "Upload PDF or DOCX resumes",
-        type=["pdf","docx"],
+        type=["pdf", "docx"],
         accept_multiple_files=True
     )
 
@@ -266,46 +268,49 @@ with right:
 
     st.header("Job Description")
 
-    jd_input=st.text_area("Paste job description",height=200)
+    jd_input = st.text_area(
+        "Paste job description",
+        height=200
+    )
 
-    analyze=st.button("Analyze Candidates")
+    analyze = st.button("Analyze Candidates")
 
-    st.markdown('</div>',unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------------------------
-# LEFT PANEL (RESULTS)
+# RESULTS
 # ------------------------------------------------
 
 with left:
 
     if analyze:
 
-        st.session_state.analysis_done=True
+        st.session_state.analysis_done = True
 
         if not resume_files or not jd_input:
 
-            st.warning("Upload resumes and enter job description")
+            st.warning("Please upload resumes and provide job description")
 
         else:
 
-            resume_texts=[]
+            resume_texts = []
 
             for file in resume_files:
 
-                ext=os.path.splitext(file.name)[1]
+                ext = os.path.splitext(file.name)[1]
 
-                if ext==".pdf":
-                    text=extract_text_from_pdf(file)
+                if ext == ".pdf":
+                    text = extract_text_from_pdf(file)
                 else:
-                    text=extract_text_from_docx(file)
+                    text = extract_text_from_docx(file)
 
-                resume_texts.append((file.name,text))
+                resume_texts.append((file.name, text))
 
-            results=compute_similarity(resume_texts,jd_input)
+            results = compute_similarity(resume_texts, jd_input)
 
-            questions=generate_questions(jd_input)
+            questions = generate_questions(jd_input)
 
-            recommendation=generate_recommendation(
+            recommendation = generate_recommendation(
                 jd_input,
                 results[0][1],
                 results[0][2]
@@ -319,20 +324,20 @@ with left:
 
             st.write(recommendation)
 
-            df=pd.DataFrame(
-                [(i+1,r[0],r[2]) for i,r in enumerate(results)],
-                columns=["Rank","Candidate Name","Match Score"]
+            df = pd.DataFrame(
+                [(i + 1, r[0], r[2]) for i, r in enumerate(results)],
+                columns=["Rank", "Candidate Name", "Match Score"]
             )
 
             st.subheader("Candidate Ranking")
 
-            st.dataframe(df,use_container_width=True)
+            st.dataframe(df, use_container_width=True)
 
             st.subheader("Candidate Analysis")
 
-            for rank,(name,text,score,exp) in enumerate(results,1):
+            for rank, (name, text, score, exp) in enumerate(results, 1):
 
-                st.markdown('<div class="result-box">',unsafe_allow_html=True)
+                st.markdown('<div class="result-box">', unsafe_allow_html=True)
 
                 st.markdown(f"### {rank}. {name}")
 
@@ -340,4 +345,4 @@ with left:
 
                 st.write(f"Estimated Experience: {exp} years")
 
-                st.markdown('</div>',unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
