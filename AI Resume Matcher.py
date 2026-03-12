@@ -37,50 +37,28 @@ def set_background(show_image=True):
         with open("background.png", "rb") as f:
             encoded = base64.b64encode(f.read()).decode()
 
-st.markdown("""
-<style>
+        st.markdown(f"""
+        <style>
+        .stApp {{
+        background-image:url("data:image/png;base64,{encoded}");
+        background-size:cover;
+        background-position:center;
+        background-repeat:no-repeat;
+        background-color:{BASE_COLOR};
+        }}
+        </style>
+        """, unsafe_allow_html=True)
 
-/* REMOVE STREAMLIT CLOUD TOP BAR */
+    else:
 
-header {
-display:none !important;
-}
-
-[data-testid="stHeader"]{
-display:none !important;
-}
-
-[data-testid="stToolbar"]{
-display:none !important;
-}
-
-[data-testid="stDecoration"]{
-display:none !important;
-}
-
-[data-testid="stStatusWidget"]{
-display:none !important;
-}
-
-div[data-testid="stAppViewContainer"] > header{
-display:none !important;
-}
-
-/* REMOVE TOP PADDING CREATED BY STREAMLIT */
-
-.block-container{
-padding-top:0rem !important;
-margin-top:0rem !important;
-}
-
-/* FORCE APP TO START FROM TOP */
-
-.stApp{
-margin-top:0px !important;
-}
-
-</style>
-""", unsafe_allow_html=True)
+        st.markdown(f"""
+        <style>
+        .stApp {{
+        background:{BASE_COLOR};
+        background-image:none;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
 
 set_background(not st.session_state.analysis_done)
 
@@ -91,38 +69,21 @@ set_background(not st.session_state.analysis_done)
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT HEADER + TOOLBAR */
+/* REMOVE STREAMLIT HEADER / TOOLBAR */
 
-header {
-visibility:hidden;
-height:0px;
-}
+header {display:none !important;}
 
-[data-testid="stToolbar"]{
-display:none;
-}
+[data-testid="stHeader"]{display:none !important;}
 
-[data-testid="stDecoration"]{
-display:none;
-}
+[data-testid="stToolbar"]{display:none !important;}
 
-[data-testid="stStatusWidget"]{
-display:none;
-}
+[data-testid="stDecoration"]{display:none !important;}
 
-/* REMOVE TOP SPACING */
+[data-testid="stStatusWidget"]{display:none !important;}
 
 .block-container{
-padding-top:0rem;
-padding-left:2rem;
-padding-right:2rem;
+padding-top:0rem !important;
 max-width:100%;
-}
-
-/* HEADINGS */
-
-h1,h2,h3{
-color:white;
 }
 
 /* TEXT */
@@ -131,10 +92,16 @@ p,label{
 color:#e6e6e6;
 }
 
+/* MAIN HEADINGS */
+
+h1,h2,h3{
+color:white;
+}
+
 /* RIGHT PANEL */
 
 .panel{
-background:rgba(7,28,44,0.80);
+background:rgba(7,28,44,0.82);
 padding:25px;
 border-radius:14px;
 backdrop-filter: blur(8px);
@@ -150,11 +117,10 @@ border-radius:8px;
 color:white;
 font-weight:700;
 font-size:20px;
-margin-bottom:5px;
-box-shadow:0px 2px 10px rgba(0,0,0,0.3);
+margin-bottom:6px;
 }
 
-/* SECTION SUBTEXT */
+/* SUB TEXT */
 
 .section-sub{
 color:#e0f7ff;
@@ -162,7 +128,7 @@ font-size:14px;
 margin-bottom:12px;
 }
 
-/* ANALYZE BUTTON */
+/* BUTTON */
 
 .stButton > button {
 background:#00bfff !important;
@@ -178,13 +144,15 @@ font-size:16px !important;
 background:#0099cc !important;
 }
 
+/* DISABLED BUTTON */
+
 .stButton > button:disabled {
 background:#8fd3ff !important;
 color:black !important;
 opacity:1 !important;
 }
 
-/* FILE UPLOADER BUTTON */
+/* FILE UPLOAD BUTTON */
 
 [data-testid="stFileUploader"] button{
 color:black !important;
@@ -245,11 +213,10 @@ def call_ai(prompt):
 def extract_text_from_pdf(file):
 
     reader = PyPDF2.PdfReader(file)
-
-    text = ""
+    text=""
 
     for page in reader.pages:
-        text += page.extract_text()
+        text+=page.extract_text()
 
     return text
 
@@ -353,10 +320,7 @@ with panel:
     st.markdown('<div class="section-header">Job Description</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-sub">Paste job description</div>', unsafe_allow_html=True)
 
-    jd_input = st.text_area(
-        "",
-        height=200
-    )
+    jd_input = st.text_area("", height=200)
 
     analyze = st.button("Analyze Candidates")
 
@@ -426,4 +390,3 @@ with main:
                 st.write(f"Estimated Experience: {exp} years")
 
                 st.markdown("</div>", unsafe_allow_html=True)
-
