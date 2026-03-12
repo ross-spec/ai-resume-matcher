@@ -7,9 +7,9 @@ import pandas as pd
 import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 
-# -----------------------------
+# ---------------------------------
 # PAGE CONFIG
-# -----------------------------
+# ---------------------------------
 
 st.set_page_config(
     page_title="AI Resume Screener",
@@ -17,24 +17,30 @@ st.set_page_config(
     layout="wide"
 )
 
-# -----------------------------
+# ---------------------------------
 # OPENROUTER CONFIG
-# -----------------------------
+# ---------------------------------
 
-OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
+try:
+    OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
+except:
+    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-MODEL = "mistralai/mistral-7b-instruct"
+MODEL = "openai/gpt-4o-mini"
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
+# Local embedding model for similarity
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# -----------------------------
+# ---------------------------------
 # AI CALL FUNCTION
-# -----------------------------
+# ---------------------------------
 
 def call_ai(prompt):
+
     try:
+
         headers = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
             "Content-Type": "application/json"
@@ -49,7 +55,7 @@ def call_ai(prompt):
         }
 
         response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
+            API_URL,
             headers=headers,
             json=payload,
             timeout=60
@@ -68,9 +74,9 @@ def call_ai(prompt):
     except Exception as e:
         return f"AI Exception: {str(e)}"
 
-# -----------------------------
-# FILE TEXT EXTRACTION
-# -----------------------------
+# ---------------------------------
+# TEXT EXTRACTION
+# ---------------------------------
 
 def extract_text_from_pdf(path):
 
@@ -94,9 +100,9 @@ def extract_text_from_docx(path):
 
     return docx2txt.process(path)
 
-# -----------------------------
+# ---------------------------------
 # KEYWORD EXTRACTION
-# -----------------------------
+# ---------------------------------
 
 def extract_keywords(text):
 
@@ -106,19 +112,18 @@ def extract_keywords(text):
 
     return list(freq.head(20).index)
 
-# -----------------------------
-# AI FUNCTIONS
-# -----------------------------
+# ---------------------------------
+# AI ANALYSIS FUNCTIONS
+# ---------------------------------
 
 def generate_candidate_summary(resume_text):
 
     prompt = f"""
-    Analyze this resume.
+    Analyze the resume and provide:
 
-    Provide:
-    Candidate role
-    Years of experience
-    Key skills
+    Candidate Role
+    Years of Experience
+    Key Skills
     Strengths
 
     Resume:
@@ -151,7 +156,7 @@ def skill_gap_analysis(jd_text, resume_text):
 def generate_interview_questions(jd_text, resume_text):
 
     prompt = f"""
-    Generate 5 interview questions based on the resume and job description.
+    Generate 5 technical interview questions based on the job description and resume.
 
     Job Description:
     {jd_text[:1500]}
@@ -162,9 +167,9 @@ def generate_interview_questions(jd_text, resume_text):
 
     return call_ai(prompt)
 
-# -----------------------------
+# ---------------------------------
 # RESUME MATCHING
-# -----------------------------
+# ---------------------------------
 
 def compute_similarity(resume_texts, jd_text):
 
@@ -190,9 +195,9 @@ def compute_similarity(resume_texts, jd_text):
 
     return sorted(results, key=lambda x: x[2], reverse=True)
 
-# -----------------------------
+# ---------------------------------
 # UI HEADER
-# -----------------------------
+# ---------------------------------
 
 st.markdown("""
 <style>
@@ -210,9 +215,9 @@ font-weight:bold;
 
 st.markdown("<div class='title'>📄 AI Resume Screener & JD Matcher</div>", unsafe_allow_html=True)
 
-# -----------------------------
+# ---------------------------------
 # SIDEBAR
-# -----------------------------
+# ---------------------------------
 
 with st.sidebar:
 
@@ -224,9 +229,9 @@ with st.sidebar:
         accept_multiple_files=True
     )
 
-# -----------------------------
+# ---------------------------------
 # MAIN LAYOUT
-# -----------------------------
+# ---------------------------------
 
 col1, col2 = st.columns([1,2])
 
@@ -314,4 +319,3 @@ with col2:
                     st.success(questions)
 
                     st.markdown("---")
-
