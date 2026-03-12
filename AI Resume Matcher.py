@@ -88,23 +88,32 @@ p,label{
 color:#e6e6e6;
 }
 
-.stButton>button{
-background:white;
+/* STRONG BUTTON STYLE OVERRIDE */
+
+div.stButton > button {
+background-color:white !important;
 color:black !important;
-font-weight:bold;
+font-weight:700 !important;
 border-radius:8px;
+border:none;
 }
 
-[data-testid="stFileUploader"] button{
+/* File uploader browse button */
+
+[data-testid="stFileUploader"] button {
 color:black !important;
-font-weight:bold;
+font-weight:700 !important;
 }
+
+/* Upload panel */
 
 .panel{
 background:rgba(7,28,44,0.9);
 padding:25px;
 border-radius:12px;
 }
+
+/* Result cards */
 
 .result-card{
 background:rgba(7,28,44,0.95);
@@ -342,5 +351,3 @@ with main:
                 st.write(f"Estimated Experience: {exp} years")
 
                 st.markdown("</div>", unsafe_allow_html=True)
-
-
