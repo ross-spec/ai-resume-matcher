@@ -1,11 +1,11 @@
 import streamlit as st
 import base64
-import os
 import pandas as pd
+from pathlib import Path
 
-# -----------------------------------------
+# ---------------------------------------------
 # PAGE CONFIG
-# -----------------------------------------
+# ---------------------------------------------
 
 st.set_page_config(
     page_title="AI Resume Screener",
@@ -13,110 +13,119 @@ st.set_page_config(
     layout="wide"
 )
 
-# -----------------------------------------
+# ---------------------------------------------
 # BACKGROUND IMAGE FUNCTION
-# -----------------------------------------
+# ---------------------------------------------
 
 def set_background(image_file):
 
-    with open(image_file, "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
+    image_path = Path(image_file)
 
-    page_bg = f"""
-    <style>
+    if image_path.exists():
 
-    [data-testid="stAppViewContainer"] {{
-        background:
-        linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)),
-        url("data:image/png;base64,{encoded}");
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-    }}
+        with open(image_path, "rb") as f:
+            encoded = base64.b64encode(f.read()).decode()
 
-    [data-testid="stHeader"] {{
-        background: rgba(0,0,0,0);
-    }}
+        css = f"""
+        <style>
 
-    h1,h2,h3,h4,h5,h6 {{
-        color: #ffffff;
-    }}
+        [data-testid="stAppViewContainer"] {{
+            background:
+            linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
+            url("data:image/png;base64,{encoded}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
 
-    p, span, div {{
-        color: #e6e6e6;
-    }}
+        [data-testid="stHeader"] {{
+            background: rgba(0,0,0,0);
+        }}
 
-    .main-title {{
-        text-align:center;
-        font-size:48px;
-        font-weight:700;
-        color:white;
-        margin-bottom:20px;
-    }}
+        #MainMenu {{visibility:hidden;}}
+        footer {{visibility:hidden;}}
 
-    .sub-title {{
-        text-align:center;
-        font-size:20px;
-        color:#d1d1d1;
-        margin-bottom:40px;
-    }}
+        h1,h2,h3,h4,h5,h6 {{
+            color:white;
+        }}
 
-    .section-card {{
-        background: rgba(0,0,0,0.65);
-        padding:25px;
-        border-radius:12px;
-        margin-bottom:25px;
-        backdrop-filter: blur(6px);
-    }}
+        p,span,div,label {{
+            color:#e6e6e6;
+        }}
 
-    .result-card {{
-        background: rgba(255,255,255,0.95);
-        padding:20px;
-        border-radius:10px;
-        margin-bottom:20px;
-        color:black;
-    }}
+        .hero-title {{
+            text-align:center;
+            font-size:48px;
+            font-weight:700;
+            color:white;
+            margin-top:40px;
+        }}
 
-    .stButton>button {{
-        background-color:#1f77ff;
-        color:white;
-        border-radius:6px;
-        padding:8px 20px;
-        border:none;
-    }}
+        .hero-subtitle {{
+            text-align:center;
+            font-size:20px;
+            color:#d0d0d0;
+            margin-bottom:40px;
+        }}
 
-    .stButton>button:hover {{
-        background-color:#005ce6;
-        color:white;
-    }}
+        .section-card {{
+            background: rgba(0,0,0,0.65);
+            padding:25px;
+            border-radius:15px;
+            margin-bottom:30px;
+            backdrop-filter: blur(8px);
+        }}
 
-    </style>
-    """
+        .result-card {{
+            background:white;
+            padding:20px;
+            border-radius:10px;
+            margin-bottom:20px;
+            color:black;
+        }}
 
-    st.markdown(page_bg, unsafe_allow_html=True)
+        .stButton>button {{
+            background-color:#2d8cff;
+            color:white;
+            border:none;
+            border-radius:6px;
+            padding:8px 18px;
+        }}
 
-# Apply background
+        .stButton>button:hover {{
+            background-color:#1b6ee0;
+        }}
+
+        </style>
+        """
+
+        st.markdown(css, unsafe_allow_html=True)
+
+    else:
+        st.error("Background image not found")
+
+# APPLY BACKGROUND
 set_background("background.png")
 
-# -----------------------------------------
-# HERO HEADER
-# -----------------------------------------
+# ---------------------------------------------
+# HERO SECTION
+# ---------------------------------------------
 
 st.markdown(
 """
-<div class='main-title'>
+<div class="hero-title">
 AI Resume Screener & Candidate Ranking
 </div>
-<div class='sub-title'>
+<div class="hero-subtitle">
 Analyze resumes, detect skills, and rank candidates using AI
 </div>
 """,
 unsafe_allow_html=True
 )
 
-# -----------------------------------------
+# ---------------------------------------------
 # SIDEBAR
-# -----------------------------------------
+# ---------------------------------------------
 
 with st.sidebar:
 
@@ -133,43 +142,52 @@ with st.sidebar:
     st.header("📋 Job Description")
 
     jd_input = st.text_area(
-        "Paste job description here",
+        "Paste job description",
         height=200
     )
 
     analyze = st.button("Analyze Candidates")
 
-# -----------------------------------------
-# MOCK FUNCTIONS (Replace with your AI logic)
-# -----------------------------------------
+# ---------------------------------------------
+# MOCK LOGIC (Replace with your AI logic)
+# ---------------------------------------------
 
 def compute_similarity(resumes, jd):
 
-    data = []
+    results=[]
 
     for i,file in enumerate(resumes):
 
-        data.append(
-            (file.name, 75 + i*5, 2+i)
-        )
+        score = 75 + (i*5)
 
-    return data
+        experience = 2 + i
+
+        results.append((file.name,score,experience))
+
+    return results
 
 
 def generate_interview_questions(jd):
 
     return """
-1. Explain star schema in Power BI  
-2. Difference between calculated column and measure  
-3. How do you optimize large Power BI dashboards?  
-4. Explain row level security  
-5. Handling large datasets in Power BI
+1. Explain the star schema used in Power BI data modeling.
+
+2. What is the difference between calculated columns and measures?
+
+3. How do you optimize Power BI reports for large datasets?
+
+4. Explain how row-level security works in Power BI.
+
+5. How would you design a data model for sales performance analytics?
+
+6. How do you handle incremental refresh in Power BI?
+
+7. Describe a challenging BI dashboard you have built.
 """
 
-
-# -----------------------------------------
-# MAIN APP
-# -----------------------------------------
+# ---------------------------------------------
+# MAIN APPLICATION
+# ---------------------------------------------
 
 if analyze:
 
@@ -179,13 +197,13 @@ if analyze:
 
     else:
 
-        results = compute_similarity(resume_files, jd_input)
+        results = compute_similarity(resume_files,jd_input)
 
-        # -----------------------------------------
+        # ---------------------------
         # INTERVIEW QUESTIONS
-        # -----------------------------------------
+        # ---------------------------
 
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
 
         st.subheader("📌 Suggested Interview Questions")
 
@@ -193,47 +211,52 @@ if analyze:
 
         st.write(questions)
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        # -----------------------------------------
+        # ---------------------------
         # RANKING TABLE
-        # -----------------------------------------
+        # ---------------------------
 
         df = pd.DataFrame(
             [(i+1,r[0],r[1]) for i,r in enumerate(results)],
             columns=["Rank","Candidate Name","Match Score %"]
         )
 
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
 
         st.subheader("🏆 Candidate Ranking")
 
         st.dataframe(df,use_container_width=True)
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        # -----------------------------------------
+        # ---------------------------
         # CANDIDATE ANALYSIS
-        # -----------------------------------------
+        # ---------------------------
 
         st.subheader("Candidate Analysis")
 
-        for i,(name,score,exp) in enumerate(results,1):
+        for i,(name,score,experience) in enumerate(results,1):
 
-            st.markdown("<div class='result-card'>", unsafe_allow_html=True)
+            st.markdown('<div class="result-card">', unsafe_allow_html=True)
 
             st.markdown(f"### {i}. {name}")
 
             st.write(f"Match Score: **{score}%**")
 
-            st.write(f"Estimated Experience: **{exp} years**")
+            st.write(f"Estimated Experience: **{experience} years**")
 
-            st.write("Candidate Summary")
+            st.markdown("**Candidate Summary**")
 
-            st.write("Strong Power BI developer with experience in SQL, DAX and data modeling.")
+            st.write(
+            "Experienced Power BI developer with strong expertise in SQL, "
+            "DAX calculations, dashboard development and data modeling."
+            )
 
-            st.write("Skill Gap")
+            st.markdown("**Skill Gap**")
 
-            st.write("Azure Data Factory, Databricks")
+            st.write(
+            "Azure Data Factory, Databricks, Advanced Data Engineering."
+            )
 
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
