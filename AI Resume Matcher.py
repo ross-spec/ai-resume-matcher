@@ -18,14 +18,12 @@ st.set_page_config(
     layout="wide"
 )
 
-# Use Streamlit Secrets for API key
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 MODEL = "mistralai/mistral-7b-instruct:free"
 
-# Load embedding model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # -----------------------------
@@ -49,7 +47,7 @@ def call_ai(prompt):
     response = requests.post(API_URL, headers=headers, data=json.dumps(body))
 
     if response.status_code != 200:
-        return ""
+        return "AI API Error"
 
     result = response.json()
 
@@ -69,10 +67,10 @@ def extract_text_from_pdf(path):
 
         for page in reader.pages:
 
-            txt = page.extract_text()
+            page_text = page.extract_text()
 
-            if txt:
-                text += txt
+            if page_text:
+                text += page_text
 
     return text
 
@@ -94,40 +92,18 @@ def extract_keywords(text):
     return list(freq.head(20).index)
 
 # -----------------------------
-# AI SKILL EXTRACTION
-# -----------------------------
-
-@st.cache_data
-def extract_skills_ai(text):
-
-    prompt = f"""
-    Extract technical skills from the text below.
-
-    Return comma separated list only.
-
-    Text:
-    {text[:2000]}
-    """
-
-    result = call_ai(prompt)
-
-    skills = result.split(",")
-
-    return [s.strip().lower() for s in skills]
-
-# -----------------------------
-# CANDIDATE SUMMARY
+# AI FUNCTIONS
 # -----------------------------
 
 @st.cache_data
 def generate_candidate_summary(resume_text):
 
     prompt = f"""
-    Analyze this resume and provide:
+    Analyze the resume and provide:
 
     - Candidate role
-    - Years of experience
-    - Key skills
+    - Estimated experience
+    - Key technical skills
     - Strengths
 
     Resume:
@@ -136,21 +112,18 @@ def generate_candidate_summary(resume_text):
 
     return call_ai(prompt)
 
-# -----------------------------
-# SKILL GAP ANALYSIS
-# -----------------------------
 
 @st.cache_data
 def skill_gap_analysis(jd_text, resume_text):
 
     prompt = f"""
-    Compare the job description and resume.
+    Compare job description and resume.
 
     Provide:
 
-    1. Required skills
-    2. Candidate skills
-    3. Missing skills
+    Required Skills
+    Candidate Skills
+    Missing Skills
 
     Job Description:
     {jd_text[:1500]}
@@ -161,16 +134,12 @@ def skill_gap_analysis(jd_text, resume_text):
 
     return call_ai(prompt)
 
-# -----------------------------
-# INTERVIEW QUESTIONS
-# -----------------------------
 
 @st.cache_data
 def generate_interview_questions(jd_text, resume_text):
 
     prompt = f"""
-    Based on the job description and resume,
-    generate 5 technical interview questions.
+    Generate 5 technical interview questions based on the job description and resume.
 
     Job Description:
     {jd_text[:1500]}
@@ -182,7 +151,7 @@ def generate_interview_questions(jd_text, resume_text):
     return call_ai(prompt)
 
 # -----------------------------
-# SIMILARITY SCORING
+# MATCHING FUNCTION
 # -----------------------------
 
 def compute_similarity(resume_texts, jd_text):
@@ -190,8 +159,6 @@ def compute_similarity(resume_texts, jd_text):
     jd_embedding = model.encode(jd_text, convert_to_tensor=True)
 
     jd_keywords = extract_keywords(jd_text)
-
-    jd_skills = extract_skills_ai(jd_text)
 
     results = []
 
@@ -211,17 +178,7 @@ def compute_similarity(resume_texts, jd_text):
 
         keyword_score = keyword_matches / len(jd_keywords) if jd_keywords else 0
 
-        resume_skills = extract_skills_ai(text)
-
-        skill_matches = len(set(jd_skills) & set(resume_skills))
-
-        skill_score = skill_matches / len(jd_skills) if jd_skills else 0
-
-        total_score = (
-            semantic_score * 0.5 +
-            keyword_score * 0.2 +
-            skill_score * 0.3
-        )
+        total_score = (semantic_score * 0.7) + (keyword_score * 0.3)
 
         results.append((name, round(total_score * 100, 2)))
 
@@ -231,8 +188,7 @@ def compute_similarity(resume_texts, jd_text):
 # UI HEADER
 # -----------------------------
 
-st.markdown(
-"""
+st.markdown("""
 <style>
 .title{
 background-color:#4B8BBE;
@@ -244,9 +200,7 @@ font-size:30px;
 font-weight:bold;
 }
 </style>
-""",
-unsafe_allow_html=True
-)
+""", unsafe_allow_html=True)
 
 st.markdown("<div class='title'>📄 AI Resume Screener & JD Matcher</div>", unsafe_allow_html=True)
 
@@ -260,7 +214,7 @@ with st.sidebar:
 
     resume_files = st.file_uploader(
         "Upload Resume Files",
-        type=["pdf", "docx"],
+        type=["pdf","docx"],
         accept_multiple_files=True
     )
 
@@ -268,7 +222,7 @@ with st.sidebar:
 # MAIN LAYOUT
 # -----------------------------
 
-col1, col2 = st.columns([1,2])
+col1,col2 = st.columns([1,2])
 
 with col1:
 
@@ -291,81 +245,104 @@ with col2:
 
         else:
 
-            st.info("Processing resumes...")
+            with st.spinner("Analyzing resumes..."):
 
-            resume_texts = []
+                resume_texts = []
 
-            for uploaded_file in resume_files:
+                for uploaded_file in resume_files:
 
-                ext = os.path.splitext(uploaded_file.name)[1]
+                    ext = os.path.splitext(uploaded_file.name)[1]
 
-                temp = uploaded_file.name
+                    temp_file = uploaded_file.name
 
-                with open(temp, "wb") as f:
+                    with open(temp_file,"wb") as f:
 
-                    f.write(uploaded_file.read())
+                        f.write(uploaded_file.read())
 
-                if ext == ".pdf":
+                    if ext == ".pdf":
 
-                    text = extract_text_from_pdf(temp)
+                        text = extract_text_from_pdf(temp_file)
 
-                else:
+                    else:
 
-                    text = extract_text_from_docx(temp)
+                        text = extract_text_from_docx(temp_file)
 
-                resume_texts.append((uploaded_file.name, text))
+                    resume_texts.append((uploaded_file.name,text))
 
-                os.remove(temp)
+                    os.remove(temp_file)
 
-            scores = compute_similarity(resume_texts, jd_input)
+                scores = compute_similarity(resume_texts,jd_input)
 
-            st.success("Matching Complete")
+                st.success("Matching Complete")
 
-            df = pd.DataFrame(scores, columns=["Candidate Name", "Match Score (%)"])
+                df = pd.DataFrame(scores, columns=["Candidate Name","Match Score (%)"])
 
-            st.dataframe(df, use_container_width=True)
+                df.index = df.index + 1
 
-            csv = df.to_csv(index=False).encode("utf-8")
+                st.dataframe(df,use_container_width=True)
 
-            st.download_button(
-                "Download Results",
-                csv,
-                "resume_results.csv",
-                "text/csv"
-            )
+                csv = df.to_csv(index=False).encode("utf-8")
 
-            st.markdown("---")
+                st.download_button(
+                    "Download Results",
+                    csv,
+                    "resume_results.csv",
+                    "text/csv"
+                )
 
-            for i,(name,score) in enumerate(scores,1):
+                st.markdown("---")
 
-                st.markdown(f"### {i}. {name}")
+                # Save resume texts to session
+                st.session_state["resume_texts"] = resume_texts
+                st.session_state["scores"] = scores
 
-                st.write(f"Match Score: {score}%")
+# -----------------------------
+# BUTTON ACTIONS
+# -----------------------------
 
-                resume_text = next(t for f,t in resume_texts if f==name)
+if "scores" in st.session_state:
 
-                colA,colB,colC = st.columns(3)
+    scores = st.session_state["scores"]
+    resume_texts = st.session_state["resume_texts"]
 
-                with colA:
+    for i,(name,score) in enumerate(scores,1):
 
-                    if st.button(f"AI Summary {i}"):
+        st.markdown(f"### {i}. {name}")
+        st.write(f"Match Score: {score}%")
 
-                        summary = generate_candidate_summary(resume_text)
+        resume_text = next(t for f,t in resume_texts if f==name)
 
-                        st.write(summary)
+        colA,colB,colC = st.columns(3)
 
-                with colB:
+        # Summary
+        with colA:
 
-                    if st.button(f"Skill Gap {i}"):
+            if st.button("AI Summary", key=f"summary_{i}"):
 
-                        gap = skill_gap_analysis(jd_input,resume_text)
+                st.session_state[f"summary_{i}"] = generate_candidate_summary(resume_text)
 
-                        st.write(gap)
+        if f"summary_{i}" in st.session_state:
 
-                with colC:
+            st.write(st.session_state[f"summary_{i}"])
 
-                    if st.button(f"Interview Questions {i}"):
+        # Skill Gap
+        with colB:
 
-                        questions = generate_interview_questions(jd_input,resume_text)
+            if st.button("Skill Gap", key=f"gap_{i}"):
 
-                        st.write(questions)
+                st.session_state[f"gap_{i}"] = skill_gap_analysis(jd_input,resume_text)
+
+        if f"gap_{i}" in st.session_state:
+
+            st.write(st.session_state[f"gap_{i}"])
+
+        # Interview Questions
+        with colC:
+
+            if st.button("Interview Questions", key=f"question_{i}"):
+
+                st.session_state[f"question_{i}"] = generate_interview_questions(jd_input,resume_text)
+
+        if f"question_{i}" in st.session_state:
+
+            st.write(st.session_state[f"question_{i}"])
