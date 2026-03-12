@@ -19,18 +19,27 @@ st.set_page_config(
 )
 
 # ------------------------------------------------
-# HEADER
+# TOP LAYOUT (HEADER + UPLOAD PANEL)
 # ------------------------------------------------
 
-st.markdown("""
-<h1 style='font-size:38px'>
-<span style='color:#2563eb;font-weight:800'>HireAI</span> – Smart Resume Screening
-</h1>
-""", unsafe_allow_html=True)
+left, right = st.columns([3,1])
 
-st.markdown("### AI Resume Screening & Candidate Ranking")
+# -------------------------
+# LEFT SIDE (HEADER)
+# -------------------------
 
-st.markdown("""
+with left:
+
+    st.markdown("""
+    <h1 style='font-size:42px;margin-bottom:5px'>
+    <span style='color:#2563eb;font-weight:900'>HireAI</span>
+    <span style='color:#111'> – Smart Resume Screening</span>
+    </h1>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### AI Resume Screening & Candidate Ranking")
+
+    st.markdown("""
 Upload resumes and paste a job description to instantly:
 
 • Rank candidates based on AI matching  
@@ -38,6 +47,46 @@ Upload resumes and paste a job description to instantly:
 • Generate interview questions  
 • Get hiring recommendations
 """)
+
+# -------------------------
+# RIGHT SIDE (UPLOAD PANEL)
+# -------------------------
+
+with right:
+
+    st.markdown(
+    """
+    <div style="
+        padding:20px;
+        border-radius:12px;
+        border:1px solid #e6e6e6;
+        background:#fafafa;
+        box-shadow:0px 4px 10px rgba(0,0,0,0.05);
+    ">
+    """,
+    unsafe_allow_html=True
+    )
+
+    st.markdown("### Upload Resumes")
+
+    resume_files = st.file_uploader(
+        "Upload PDF or DOCX resumes",
+        type=["pdf","docx"],
+        accept_multiple_files=True
+    )
+
+    st.markdown("---")
+
+    st.markdown("### Job Description")
+
+    jd_input = st.text_area(
+        "Paste job description",
+        height=200
+    )
+
+    analyze = st.button("Analyze Candidates")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------------------------------------
 # AI CONFIG
@@ -180,182 +229,152 @@ Hiring recommendation
     return call_ai(prompt)
 
 # ------------------------------------------------
-# LAYOUT
+# MAIN RESULT SECTION
 # ------------------------------------------------
 
-main,panel = st.columns([3,1])
+if analyze:
 
-# ------------------------------------------------
-# RIGHT PANEL
-# ------------------------------------------------
+    if not resume_files or not jd_input:
 
-with panel:
+        st.warning("Upload resumes and provide job description")
 
-    st.markdown("### Upload Resumes")
+    else:
 
-    resume_files=st.file_uploader(
-        "Upload PDF or DOCX resumes",
-        type=["pdf","docx"],
-        accept_multiple_files=True
-    )
+        with st.spinner("Analyzing resumes with AI..."):
 
-    st.markdown("---")
+            resume_texts=[]
 
-    st.markdown("### Job Description")
+            for file in resume_files:
 
-    jd_input=st.text_area("Paste job description",height=200)
+                ext=os.path.splitext(file.name)[1]
 
-    analyze=st.button("Analyze Candidates")
+                if ext==".pdf":
+                    text=extract_text_from_pdf(file)
+                else:
+                    text=extract_text_from_docx(file)
 
-# ------------------------------------------------
-# RESULTS
-# ------------------------------------------------
+                resume_texts.append((file.name,text))
 
-with main:
+            results=compute_similarity(resume_texts,jd_input)
 
-    if analyze:
+            questions=generate_questions(jd_input)
 
-        if not resume_files or not jd_input:
+        # ------------------------------------------------
+        # REAL STATS
+        # ------------------------------------------------
 
-            st.warning("Upload resumes and provide job description")
+        scores=[r[2] for r in results]
 
-        else:
+        avg_score=round(np.mean(scores),2)
 
-            with st.spinner("Analyzing resumes with AI..."):
+        top_score=max(scores)
 
-                resume_texts=[]
+        total_resumes=len(resume_files)
 
-                for file in resume_files:
+        ranked_candidates=len(results)
 
-                    ext=os.path.splitext(file.name)[1]
+        st.markdown("## 📊 Screening Dashboard")
 
-                    if ext==".pdf":
-                        text=extract_text_from_pdf(file)
-                    else:
-                        text=extract_text_from_docx(file)
+        c1,c2,c3,c4 = st.columns(4)
 
-                    resume_texts.append((file.name,text))
+        with c1:
+            st.metric("Resumes Uploaded", total_resumes)
 
-                results=compute_similarity(resume_texts,jd_input)
+        with c2:
+            st.metric("Candidates Ranked", ranked_candidates)
 
-                questions=generate_questions(jd_input)
+        with c3:
+            st.metric("Top Match Score", f"{top_score}%")
 
-            # ------------------------------------------------
-            # REAL STATS
-            # ------------------------------------------------
+        with c4:
+            st.metric("Average Match Score", f"{avg_score}%")
 
-            scores=[r[2] for r in results]
+        # ------------------------------------------------
+        # TOP CANDIDATE
+        # ------------------------------------------------
 
-            avg_score=round(np.mean(scores),2)
+        st.markdown("## 🏆 Top Candidate")
 
-            top_score=max(scores)
+        top_candidate=results[0]
 
-            total_resumes=len(resume_files)
+        st.success(f"Best Match: **{top_candidate[0]}** ({top_candidate[2]}%)")
 
-            ranked_candidates=len(results)
+        # ------------------------------------------------
+        # SCORE CHART
+        # ------------------------------------------------
 
-            st.markdown("## 📊 Screening Dashboard")
+        st.markdown("## 📈 Candidate Match Scores")
 
-            c1,c2,c3,c4 = st.columns(4)
+        names=[r[0] for r in results]
 
-            with c1:
-                st.metric("Resumes Uploaded", total_resumes)
+        scores=[r[2] for r in results]
 
-            with c2:
-                st.metric("Candidates Ranked", ranked_candidates)
+        fig,ax = plt.subplots()
 
-            with c3:
-                st.metric("Top Match Score", f"{top_score}%")
+        ax.barh(names,scores)
 
-            with c4:
-                st.metric("Average Match Score", f"{avg_score}%")
+        ax.set_xlabel("Match Score")
 
-            # ------------------------------------------------
-            # TOP CANDIDATE
-            # ------------------------------------------------
+        ax.set_title("Resume Matching Scores")
 
-            st.markdown("## 🏆 Top Candidate")
+        st.pyplot(fig)
 
-            top_candidate=results[0]
+        # ------------------------------------------------
+        # RANKING TABLE
+        # ------------------------------------------------
 
-            st.success(f"Best Match: **{top_candidate[0]}** ({top_candidate[2]}%)")
+        df=pd.DataFrame(
+            [(i+1,r[0],r[2]) for i,r in enumerate(results)],
+            columns=["Rank","Candidate Name","Match Score"]
+        )
 
-            # ------------------------------------------------
-            # SCORE CHART
-            # ------------------------------------------------
+        st.subheader("Candidate Ranking")
 
-            st.markdown("## 📈 Candidate Match Scores")
+        st.dataframe(df,use_container_width=True)
 
-            names=[r[0] for r in results]
+        csv=df.to_csv(index=False).encode("utf-8")
 
-            scores=[r[2] for r in results]
+        st.download_button(
+            "Download Ranking CSV",
+            csv,
+            "candidate_ranking.csv",
+            "text/csv"
+        )
 
-            fig,ax = plt.subplots()
+        # ------------------------------------------------
+        # INTERVIEW QUESTIONS
+        # ------------------------------------------------
 
-            ax.barh(names,scores)
+        st.subheader("Interview Questions")
 
-            ax.set_xlabel("Match Score")
+        st.write(questions)
 
-            ax.set_title("Resume Matching Scores")
+        # ------------------------------------------------
+        # CANDIDATE ANALYSIS
+        # ------------------------------------------------
 
-            st.pyplot(fig)
+        st.subheader("Candidate Analysis")
 
-            # ------------------------------------------------
-            # RANKING TABLE
-            # ------------------------------------------------
+        for rank,(name,text,score,exp) in enumerate(results,1):
 
-            df=pd.DataFrame(
-                [(i+1,r[0],r[2]) for i,r in enumerate(results)],
-                columns=["Rank","Candidate Name","Match Score"]
-            )
+            st.markdown(f"### {rank}. {name}")
 
-            st.subheader("Candidate Ranking")
+            st.write(f"Match Score: {score}%")
 
-            st.dataframe(df,use_container_width=True)
+            st.progress(score/100)
 
-            csv=df.to_csv(index=False).encode("utf-8")
+            st.write(f"Estimated Experience: {exp} years")
 
-            st.download_button(
-                "Download Ranking CSV",
-                csv,
-                "candidate_ranking.csv",
-                "text/csv"
-            )
+            skills=extract_skills(text)
 
-            # ------------------------------------------------
-            # INTERVIEW QUESTIONS
-            # ------------------------------------------------
+            st.write("Top Skills:")
 
-            st.subheader("Interview Questions")
+            st.write(skills)
 
-            st.write(questions)
+            recommendation=generate_recommendation(jd_input,text,score)
 
-            # ------------------------------------------------
-            # CANDIDATE ANALYSIS
-            # ------------------------------------------------
+            st.write("AI Recommendation")
 
-            st.subheader("Candidate Analysis")
+            st.write(recommendation)
 
-            for rank,(name,text,score,exp) in enumerate(results,1):
-
-                st.markdown(f"### {rank}. {name}")
-
-                st.write(f"Match Score: {score}%")
-
-                st.progress(score/100)
-
-                st.write(f"Estimated Experience: {exp} years")
-
-                skills=extract_skills(text)
-
-                st.write("Top Skills:")
-
-                st.write(skills)
-
-                recommendation=generate_recommendation(jd_input,text,score)
-
-                st.write("AI Recommendation")
-
-                st.write(recommendation)
-
-                st.markdown("---")
+            st.markdown("---")
