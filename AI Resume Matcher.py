@@ -37,28 +37,50 @@ def set_background(show_image=True):
         with open("background.png", "rb") as f:
             encoded = base64.b64encode(f.read()).decode()
 
-        st.markdown(f"""
-        <style>
-        .stApp {{
-        background-image:url("data:image/png;base64,{encoded}");
-        background-size:cover;
-        background-position:center;
-        background-repeat:no-repeat;
-        background-color:{BASE_COLOR};
-        }}
-        </style>
-        """, unsafe_allow_html=True)
+st.markdown("""
+<style>
 
-    else:
+/* REMOVE STREAMLIT CLOUD TOP BAR */
 
-        st.markdown(f"""
-        <style>
-        .stApp {{
-        background:{BASE_COLOR};
-        background-image:none;
-        }}
-        </style>
-        """, unsafe_allow_html=True)
+header {
+display:none !important;
+}
+
+[data-testid="stHeader"]{
+display:none !important;
+}
+
+[data-testid="stToolbar"]{
+display:none !important;
+}
+
+[data-testid="stDecoration"]{
+display:none !important;
+}
+
+[data-testid="stStatusWidget"]{
+display:none !important;
+}
+
+div[data-testid="stAppViewContainer"] > header{
+display:none !important;
+}
+
+/* REMOVE TOP PADDING CREATED BY STREAMLIT */
+
+.block-container{
+padding-top:0rem !important;
+margin-top:0rem !important;
+}
+
+/* FORCE APP TO START FROM TOP */
+
+.stApp{
+margin-top:0px !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 set_background(not st.session_state.analysis_done)
 
@@ -404,3 +426,4 @@ with main:
                 st.write(f"Estimated Experience: {exp} years")
 
                 st.markdown("</div>", unsafe_allow_html=True)
+
