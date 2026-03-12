@@ -34,7 +34,7 @@ def set_background():
         <style>
 
         [data-testid="stAppViewContainer"] {{
-            background-color:#0a0a0a;
+            background-color:#071c2c;
             background-image:url("data:image/png;base64,{encoded}");
             background-position:85% center;
             background-size:contain;
@@ -53,8 +53,8 @@ def set_background():
         }}
 
         section[data-testid="stSidebar"] {{
-            background:#0a0a0a;
-            border-right:1px solid rgba(255,255,255,0.08);
+            background:#071c2c;
+            border-right:1px solid rgba(255,255,255,0.05);
         }}
 
         #MainMenu {{visibility:hidden;}}
@@ -70,18 +70,21 @@ def set_background():
         }}
 
         .section-card {{
-            background:rgba(0,0,0,0.65);
+            background:rgba(7,28,44,0.85);
             padding:25px;
             border-radius:15px;
             margin-bottom:30px;
+            backdrop-filter:blur(8px);
+            border:1px solid rgba(255,255,255,0.05);
         }}
 
         .result-card {{
-            background:white;
+            background:rgba(7,28,44,0.92);
             padding:20px;
             border-radius:10px;
             margin-bottom:20px;
-            color:black;
+            color:white;
+            border:1px solid rgba(255,255,255,0.05);
         }}
 
         </style>
@@ -96,9 +99,7 @@ set_background()
 # ------------------------------------------------
 
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
-
 MODEL = "openai/gpt-4o-mini"
-
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -136,7 +137,6 @@ def call_ai(prompt):
 def extract_text_from_pdf(file):
 
     text = ""
-
     reader = PyPDF2.PdfReader(file)
 
     for page in reader.pages:
@@ -146,11 +146,10 @@ def extract_text_from_pdf(file):
 
 
 def extract_text_from_docx(file):
-
     return docx2txt.process(file)
 
 # ------------------------------------------------
-# RESUME SIMILARITY
+# RESUME SCORING
 # ------------------------------------------------
 
 def compute_similarity(resume_texts, jd_text):
@@ -182,14 +181,15 @@ def generate_interview_questions(jd_text, resume_text, experience):
     prompt = f"""
 You are a senior technical interviewer.
 
-Generate 7 interview questions based on BOTH the job description
+Generate 10 interview questions based on BOTH the job description
 and the candidate resume.
 
 Candidate Experience: {experience} years
 
-If experience <2 → beginner
-2-5 → intermediate
->5 → advanced
+Difficulty:
+0-2 years → beginner
+2-5 years → intermediate
+5+ years → advanced
 
 Job Description:
 {jd_text}
@@ -197,7 +197,36 @@ Job Description:
 Candidate Resume:
 {resume_text[:2000]}
 
-Return numbered questions only.
+Return ONLY 10 numbered interview questions.
+"""
+
+    return call_ai(prompt)
+
+# ------------------------------------------------
+# AI HIRING RECOMMENDATION
+# ------------------------------------------------
+
+def generate_recommendation(jd_text, resume_text, score):
+
+    prompt = f"""
+You are an AI hiring assistant.
+
+Based on the resume and job description,
+provide a hiring recommendation.
+
+Candidate Score: {score}%
+
+Job Description:
+{jd_text}
+
+Candidate Resume:
+{resume_text[:2000]}
+
+Provide:
+• Candidate fit level
+• Key strengths
+• Missing skills
+• Final hiring recommendation
 """
 
     return call_ai(prompt)
@@ -228,7 +257,7 @@ with st.sidebar:
     analyze = st.button("Analyze Candidates")
 
 # ------------------------------------------------
-# MAIN APP
+# MAIN APPLICATION
 # ------------------------------------------------
 
 if analyze:
@@ -278,6 +307,24 @@ if analyze:
         st.markdown('</div>', unsafe_allow_html=True)
 
         # --------------------------------
+        # AI RECOMMENDATION
+        # --------------------------------
+
+        recommendation = generate_recommendation(
+            jd_input,
+            top_candidate[1],
+            top_candidate[2]
+        )
+
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+
+        st.subheader("AI Hiring Recommendation")
+
+        st.write(recommendation)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # --------------------------------
         # RANKING TABLE
         # --------------------------------
 
@@ -308,11 +355,5 @@ if analyze:
 
             st.write(f"Match Score: **{score}%**")
             st.write(f"Estimated Experience: **{experience} years**")
-
-            st.write("Candidate Summary")
-
-            st.write(
-            "Experienced BI professional with strong expertise in Power BI, SQL, and data visualization."
-            )
 
             st.markdown('</div>', unsafe_allow_html=True)
