@@ -69,6 +69,14 @@ set_background(not st.session_state.analysis_done)
 st.markdown("""
 <style>
 
+/* REMOVE STREAMLIT HEADER */
+
+header[data-testid="stHeader"]{
+display:none;
+}
+
+/* PAGE LAYOUT */
+
 .block-container{
 padding-top:0rem;
 padding-left:2rem;
@@ -76,7 +84,7 @@ padding-right:2rem;
 max-width:100%;
 }
 
-/* MAIN HEADINGS */
+/* HEADINGS */
 
 h1,h2,h3{
 color:white;
