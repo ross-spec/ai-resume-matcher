@@ -21,7 +21,6 @@ st.set_page_config(
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-
 MODEL = "mistralai/mistral-7b-instruct:free"
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -95,16 +94,15 @@ def extract_keywords(text):
 # AI FUNCTIONS
 # -----------------------------
 
-@st.cache_data
 def generate_candidate_summary(resume_text):
 
     prompt = f"""
     Analyze the resume and provide:
 
-    - Candidate role
-    - Estimated experience
-    - Key technical skills
-    - Strengths
+    Candidate role
+    Years of experience
+    Key technical skills
+    Strengths
 
     Resume:
     {resume_text[:2000]}
@@ -113,7 +111,6 @@ def generate_candidate_summary(resume_text):
     return call_ai(prompt)
 
 
-@st.cache_data
 def skill_gap_analysis(jd_text, resume_text):
 
     prompt = f"""
@@ -135,7 +132,6 @@ def skill_gap_analysis(jd_text, resume_text):
     return call_ai(prompt)
 
 
-@st.cache_data
 def generate_interview_questions(jd_text, resume_text):
 
     prompt = f"""
@@ -292,7 +288,6 @@ with col2:
 
                 st.markdown("---")
 
-                # Save resume texts to session
                 st.session_state["resume_texts"] = resume_texts
                 st.session_state["scores"] = scores
 
@@ -314,34 +309,36 @@ if "scores" in st.session_state:
 
         colA,colB,colC = st.columns(3)
 
-        # Summary
         with colA:
 
             if st.button("AI Summary", key=f"summary_{i}"):
 
-                st.session_state[f"summary_{i}"] = generate_candidate_summary(resume_text)
+                with st.spinner("Generating summary..."):
+                    st.session_state[f"summary_{i}"] = generate_candidate_summary(resume_text)
 
         if f"summary_{i}" in st.session_state:
 
             st.write(st.session_state[f"summary_{i}"])
 
-        # Skill Gap
+
         with colB:
 
             if st.button("Skill Gap", key=f"gap_{i}"):
 
-                st.session_state[f"gap_{i}"] = skill_gap_analysis(jd_input,resume_text)
+                with st.spinner("Analyzing skill gap..."):
+                    st.session_state[f"gap_{i}"] = skill_gap_analysis(jd_input,resume_text)
 
         if f"gap_{i}" in st.session_state:
 
             st.write(st.session_state[f"gap_{i}"])
 
-        # Interview Questions
+
         with colC:
 
             if st.button("Interview Questions", key=f"question_{i}"):
 
-                st.session_state[f"question_{i}"] = generate_interview_questions(jd_input,resume_text)
+                with st.spinner("Generating questions..."):
+                    st.session_state[f"question_{i}"] = generate_interview_questions(jd_input,resume_text)
 
         if f"question_{i}" in st.session_state:
 
