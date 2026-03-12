@@ -29,7 +29,6 @@ except:
 MODEL = "openai/gpt-4o-mini"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Local embedding model
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # -----------------------------------
@@ -45,9 +44,7 @@ def call_ai(prompt):
 
     payload = {
         "model": MODEL,
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
+        "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.2
     }
 
@@ -97,7 +94,7 @@ def extract_required_skills(jd_text):
 
     prompt = f"""
     Extract required technical skills from this job description.
-    Return only comma separated skills.
+    Return comma separated skills.
 
     Job Description:
     {jd_text[:2000]}
@@ -110,7 +107,7 @@ def extract_candidate_skills(resume_text):
 
     prompt = f"""
     Extract technical skills from this resume.
-    Return only comma separated skills.
+    Return comma separated skills.
 
     Resume:
     {resume_text[:2000]}
@@ -123,7 +120,6 @@ def extract_experience(resume_text):
 
     prompt = f"""
     Estimate total years of experience from this resume.
-
     Return only a number.
 
     Resume:
@@ -139,7 +135,7 @@ def extract_experience(resume_text):
 def generate_candidate_summary(resume_text):
 
     prompt = f"""
-    Analyze this resume and provide:
+    Analyze the resume and provide:
 
     Candidate Role
     Years of Experience
@@ -176,42 +172,24 @@ def skill_gap_analysis(jd_text,resume_text):
     return call_ai(prompt)
 
 # -----------------------------------
-# EXPERIENCE BASED INTERVIEW QUESTIONS
+# INTERVIEW QUESTIONS (JD BASED)
 # -----------------------------------
 
-def generate_interview_questions(jd_text,resume_text,experience):
+def generate_interview_questions_for_jd(jd_text):
 
     prompt = f"""
-    Generate interview questions based on candidate experience.
-
-    Candidate Experience: {experience} years
-
-    If experience <2 years → beginner
-    2-5 years → intermediate
-    >5 years → advanced
+    Generate 7 interview questions for this job description.
 
     Job Description:
-    {jd_text[:1500]}
+    {jd_text}
 
-    Resume:
-    {resume_text[:1500]}
-
-    Generate 5 interview questions.
+    Questions should include:
+    - technical questions
+    - real scenario questions
+    - problem solving questions
     """
 
     return call_ai(prompt)
-
-# -----------------------------------
-# KEYWORD EXTRACTION
-# -----------------------------------
-
-def extract_keywords(text):
-
-    words = re.findall(r"\b[a-zA-Z]{4,}\b", text.lower())
-
-    freq = pd.Series(words).value_counts()
-
-    return list(freq.head(20).index)
 
 # -----------------------------------
 # ADVANCED ATS SCORING
@@ -222,7 +200,6 @@ def compute_similarity(resume_texts,jd_text):
     jd_embedding = embedding_model.encode(jd_text,convert_to_tensor=True)
 
     required_skills = extract_required_skills(jd_text)
-
     required_skills_list = [s.strip().lower() for s in required_skills.split(",")]
 
     results = []
@@ -234,11 +211,9 @@ def compute_similarity(resume_texts,jd_text):
         semantic_score = util.cos_sim(jd_embedding,resume_embedding).item()
 
         candidate_skills = extract_candidate_skills(text)
-
         candidate_skills_list = [s.strip().lower() for s in candidate_skills.split(",")]
 
         skill_matches = len(set(required_skills_list) & set(candidate_skills_list))
-
         skill_score = skill_matches / len(required_skills_list) if required_skills_list else 0
 
         experience = extract_experience(text)
@@ -261,24 +236,45 @@ def compute_similarity(resume_texts,jd_text):
     return sorted(results,key=lambda x:x[2],reverse=True)
 
 # -----------------------------------
-# UI HEADER
+# CUSTOM CSS DESIGN
 # -----------------------------------
 
 st.markdown("""
 <style>
-.title{
-background-color:#4B8BBE;
-color:white;
-padding:15px;
-border-radius:10px;
-text-align:center;
-font-size:30px;
-font-weight:bold;
+
+[data-testid="stAppViewContainer"] {
+    background-image: url("https://images.unsplash.com/photo-1551288049-bebda4e38f71");
+    background-size: cover;
+    background-attachment: fixed;
 }
+
+.main-title{
+text-align:center;
+font-size:48px;
+font-weight:700;
+color:white;
+margin-bottom:30px;
+}
+
+.section-card{
+background-color:rgba(0,0,0,0.7);
+padding:25px;
+border-radius:15px;
+margin-bottom:20px;
+color:white;
+}
+
+.result-card{
+background-color:white;
+padding:20px;
+border-radius:10px;
+margin-bottom:15px;
+}
+
 </style>
 """,unsafe_allow_html=True)
 
-st.markdown("<div class='title'>📄 AI Resume Screener & JD Matcher</div>",unsafe_allow_html=True)
+st.markdown("<div class='main-title'>AI Resume Screener & Candidate Ranking</div>",unsafe_allow_html=True)
 
 # -----------------------------------
 # SIDEBAR
@@ -289,99 +285,94 @@ with st.sidebar:
     st.header("Upload Resumes")
 
     resume_files = st.file_uploader(
-        "Upload Resume Files",
+        "Upload PDF or DOCX resumes",
         type=["pdf","docx"],
         accept_multiple_files=True
     )
 
-# -----------------------------------
-# MAIN LAYOUT
-# -----------------------------------
+    st.markdown("---")
 
-col1,col2 = st.columns([1,2])
-
-with col1:
-
-    st.subheader("Job Description")
+    st.header("Job Description")
 
     jd_input = st.text_area(
-        "Paste Job Description",
-        height=300
+        "Paste job description",
+        height=200
     )
 
-with col2:
+    analyze = st.button("Analyze Candidates")
 
-    st.subheader("Resume Ranking")
+# -----------------------------------
+# MAIN APPLICATION
+# -----------------------------------
 
-    if st.button("Analyze Resumes"):
+if analyze:
 
-        if not resume_files or not jd_input.strip():
+    if not resume_files or not jd_input:
 
-            st.warning("Upload resumes and provide JD")
+        st.warning("Please upload resumes and provide job description")
 
-        else:
+    else:
 
-            with st.spinner("Analyzing resumes..."):
+        with st.spinner("Analyzing resumes..."):
 
-                resume_texts=[]
+            resume_texts=[]
 
-                for uploaded_file in resume_files:
+            for uploaded_file in resume_files:
 
-                    ext=os.path.splitext(uploaded_file.name)[1]
+                ext=os.path.splitext(uploaded_file.name)[1]
 
-                    temp_file=uploaded_file.name
+                temp_file=uploaded_file.name
 
-                    with open(temp_file,"wb") as f:
-                        f.write(uploaded_file.read())
+                with open(temp_file,"wb") as f:
+                    f.write(uploaded_file.read())
 
-                    if ext==".pdf":
-                        text=extract_text_from_pdf(temp_file)
-                    else:
-                        text=extract_text_from_docx(temp_file)
+                if ext==".pdf":
+                    text=extract_text_from_pdf(temp_file)
+                else:
+                    text=extract_text_from_docx(temp_file)
 
-                    resume_texts.append((uploaded_file.name,text))
+                resume_texts.append((uploaded_file.name,text))
 
-                    os.remove(temp_file)
+                os.remove(temp_file)
 
-                results=compute_similarity(resume_texts,jd_input)
+            results=compute_similarity(resume_texts,jd_input)
 
-                df=pd.DataFrame(
-                    [(i+1,r[0],r[2]) for i,r in enumerate(results)],
-                    columns=["Rank","Candidate Name","Match Score %"]
-                )
+        # Interview questions
+        st.markdown("<div class='section-card'>",unsafe_allow_html=True)
+        st.subheader("Interview Questions")
+        questions = generate_interview_questions_for_jd(jd_input)
+        st.write(questions)
+        st.markdown("</div>",unsafe_allow_html=True)
 
-                st.dataframe(df,use_container_width=True)
+        # Ranking table
+        df=pd.DataFrame(
+            [(i+1,r[0],r[2]) for i,r in enumerate(results)],
+            columns=["Rank","Candidate Name","Match Score %"]
+        )
 
-                st.download_button(
-                    "Download Results",
-                    df.to_csv(index=False),
-                    "resume_results.csv"
-                )
+        st.markdown("<div class='section-card'>",unsafe_allow_html=True)
+        st.subheader("Candidate Ranking")
+        st.dataframe(df,use_container_width=True)
+        st.markdown("</div>",unsafe_allow_html=True)
 
-                st.markdown("---")
+        # Candidate analysis
+        st.subheader("Candidate Analysis")
 
-                st.header("Candidate Analysis")
+        for rank,(name,text,score,experience) in enumerate(results,1):
 
-                for rank,(name,text,score,experience) in enumerate(results,1):
+            st.markdown("<div class='result-card'>",unsafe_allow_html=True)
 
-                    st.subheader(f"{rank}. {name}")
+            st.markdown(f"### {rank}. {name}")
+            st.write(f"Match Score: **{score}%**")
+            st.write(f"Estimated Experience: **{experience} years**")
 
-                    st.write(f"Match Score: {score}%")
-                    st.write(f"Estimated Experience: {experience} years")
+            summary=generate_candidate_summary(text)
+            gap=skill_gap_analysis(jd_input,text)
 
-                    with st.spinner("Running AI analysis..."):
+            st.markdown("**Candidate Summary**")
+            st.write(summary)
 
-                        summary=generate_candidate_summary(text)
-                        gap=skill_gap_analysis(jd_input,text)
-                        questions=generate_interview_questions(jd_input,text,experience)
+            st.markdown("**Skill Gap**")
+            st.write(gap)
 
-                    st.markdown("### Candidate Summary")
-                    st.info(summary)
-
-                    st.markdown("### Skill Gap")
-                    st.warning(gap)
-
-                    st.markdown("### Interview Questions")
-                    st.success(questions)
-
-                    st.markdown("---")
+            st.markdown("</div>",unsafe_allow_html=True)
