@@ -5,4 +5,4 @@ docx2txt
 sentence-transformers
 openpyxl
 requests
-scikit-learn
+
