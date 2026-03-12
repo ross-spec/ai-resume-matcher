@@ -4,4 +4,5 @@ PyPDF2
 docx2txt
 sentence-transformers
 openpyxl
-openai
+requests
+scikit-learn
