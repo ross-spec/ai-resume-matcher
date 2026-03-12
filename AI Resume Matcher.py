@@ -9,7 +9,7 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 
 # -----------------------------
-# CONFIG
+# PAGE CONFIG
 # -----------------------------
 
 st.set_page_config(
@@ -18,39 +18,58 @@ st.set_page_config(
     layout="wide"
 )
 
+# -----------------------------
+# API CONFIG
+# -----------------------------
+
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "mistralai/mistral-7b-instruct:free"
+
+MODEL = "meta-llama/llama-3.1-8b-instruct:free"
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # -----------------------------
-# AI CALL
+# AI CALL FUNCTION
 # -----------------------------
 
 def call_ai(prompt):
 
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json"
-    }
+    try:
 
-    body = {
-        "model": MODEL,
-        "messages": [
-            {"role": "user", "content": prompt}
-        ]
-    }
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
 
-    response = requests.post(API_URL, headers=headers, data=json.dumps(body))
+        data = {
+            "model": MODEL,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
 
-    if response.status_code != 200:
-        return "AI Error"
+        response = requests.post(
+            API_URL,
+            headers=headers,
+            json=data
+        )
 
-    result = response.json()
+        result = response.json()
 
-    return result["choices"][0]["message"]["content"]
+        if "choices" in result:
+
+            return result["choices"][0]["message"]["content"]
+
+        else:
+
+            return f"AI Error: {result}"
+
+    except Exception as e:
+
+        return f"AI Exception: {str(e)}"
+
 
 # -----------------------------
 # FILE TEXT EXTRACTION
@@ -78,6 +97,7 @@ def extract_text_from_docx(path):
 
     return docx2txt.process(path)
 
+
 # -----------------------------
 # KEYWORD EXTRACTION
 # -----------------------------
@@ -90,6 +110,7 @@ def extract_keywords(text):
 
     return list(freq.head(20).index)
 
+
 # -----------------------------
 # AI ANALYSIS FUNCTIONS
 # -----------------------------
@@ -97,13 +118,12 @@ def extract_keywords(text):
 def generate_candidate_summary(resume_text):
 
     prompt = f"""
-    Analyze this resume.
+    Analyze the following resume.
 
     Provide:
-
-    Candidate Role
-    Years of Experience
-    Key Skills
+    Candidate role
+    Years of experience
+    Key technical skills
     Strengths
 
     Resume:
@@ -116,13 +136,12 @@ def generate_candidate_summary(resume_text):
 def skill_gap_analysis(jd_text, resume_text):
 
     prompt = f"""
-    Compare job description and resume.
+    Compare the job description and resume.
 
     Provide:
-
-    Required Skills
-    Candidate Skills
-    Missing Skills
+    Required skills
+    Candidate skills
+    Missing skills
 
     Job Description:
     {jd_text[:1500]}
@@ -137,7 +156,7 @@ def skill_gap_analysis(jd_text, resume_text):
 def generate_interview_questions(jd_text, resume_text):
 
     prompt = f"""
-    Generate 5 interview questions based on this resume and job description.
+    Generate 5 technical interview questions based on the resume and job description.
 
     Job Description:
     {jd_text[:1500]}
@@ -147,6 +166,7 @@ def generate_interview_questions(jd_text, resume_text):
     """
 
     return call_ai(prompt)
+
 
 # -----------------------------
 # RESUME MATCHING
@@ -176,8 +196,9 @@ def compute_similarity(resume_texts, jd_text):
 
     return sorted(results, key=lambda x: x[2], reverse=True)
 
+
 # -----------------------------
-# UI
+# UI DESIGN
 # -----------------------------
 
 st.markdown("""
@@ -194,7 +215,8 @@ font-weight:bold;
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div class='title'>AI Resume Screener & JD Matcher</div>", unsafe_allow_html=True)
+st.markdown("<div class='title'>📄 AI Resume Screener & JD Matcher</div>", unsafe_allow_html=True)
+
 
 # -----------------------------
 # SIDEBAR
@@ -205,10 +227,11 @@ with st.sidebar:
     st.header("Upload Resumes")
 
     resume_files = st.file_uploader(
-        "Upload PDF or DOCX",
-        type=["pdf","docx"],
+        "Upload Resume Files",
+        type=["pdf", "docx"],
         accept_multiple_files=True
     )
+
 
 # -----------------------------
 # MAIN LAYOUT
@@ -225,6 +248,7 @@ with col1:
         height=300
     )
 
+
 with col2:
 
     st.subheader("Resume Ranking")
@@ -233,7 +257,7 @@ with col2:
 
         if not resume_files or not jd_input.strip():
 
-            st.warning("Upload resumes and provide JD")
+            st.warning("Please upload resumes and enter job description.")
 
         else:
 
@@ -280,30 +304,32 @@ with col2:
 
                 st.markdown("---")
 
-                # -----------------------------
-                # AI ANALYSIS SECTIONS
-                # -----------------------------
-
                 st.header("Candidate Analysis")
 
                 for rank,(name,text,score) in enumerate(results,1):
 
                     st.subheader(f"{rank}. {name}")
+
                     st.write(f"Match Score: {score}%")
 
-                    with st.spinner("Generating AI analysis..."):
+                    with st.spinner("Running AI analysis..."):
 
                         summary = generate_candidate_summary(text)
+
                         gap = skill_gap_analysis(jd_input,text)
+
                         questions = generate_interview_questions(jd_input,text)
 
                     st.markdown("### Candidate Summary")
+
                     st.info(summary)
 
                     st.markdown("### Skill Gap")
+
                     st.warning(gap)
 
                     st.markdown("### Interview Questions")
+
                     st.success(questions)
 
                     st.markdown("---")
