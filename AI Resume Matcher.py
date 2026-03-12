@@ -39,7 +39,6 @@ def set_background(show_image=True):
 
         st.markdown(f"""
         <style>
-
         .stApp {{
         background-image:url("data:image/png;base64,{encoded}");
         background-size:cover;
@@ -47,7 +46,6 @@ def set_background(show_image=True):
         background-repeat:no-repeat;
         background-color:{BASE_COLOR};
         }}
-
         </style>
         """, unsafe_allow_html=True)
 
@@ -55,12 +53,10 @@ def set_background(show_image=True):
 
         st.markdown(f"""
         <style>
-
         .stApp {{
         background:{BASE_COLOR};
         background-image:none;
         }}
-
         </style>
         """, unsafe_allow_html=True)
 
@@ -88,34 +84,49 @@ p,label{
 color:#e6e6e6;
 }
 
-/* FIX BUTTON TEXT COLOR */
+/* ANALYZE BUTTON STYLE */
 
-button[kind="secondary"] {
+.stButton > button {
+background: #00bfff !important;
+color: black !important;
+font-weight: 700 !important;
+border-radius: 10px !important;
+border: none !important;
+padding: 10px 20px !important;
+font-size: 16px !important;
+}
+
+/* HOVER */
+
+.stButton > button:hover {
+background: #00a6e0 !important;
+color: black !important;
+}
+
+/* DISABLED BUTTON */
+
+.stButton > button:disabled {
+background: #8fd3ff !important;
+color: black !important;
+opacity: 1 !important;
+}
+
+/* FILE UPLOAD BUTTON */
+
+[data-testid="stFileUploader"] button{
 color:black !important;
 font-weight:700 !important;
 }
 
-button[kind="primary"] {
-color:black !important;
-font-weight:700 !important;
-}
-
-/* Browse Files Button */
-
-[data-testid="stFileUploader"] button {
-color:black !important;
-font-weight:700 !important;
-}
-
-/* Upload Panel */
+/* RIGHT PANEL */
 
 .panel{
-background:rgba(7,28,44,0.9);
+background:rgba(7,28,44,0.92);
 padding:25px;
 border-radius:12px;
 }
 
-/* Result Cards */
+/* RESULT CARDS */
 
 .result-card{
 background:rgba(7,28,44,0.95);
@@ -324,11 +335,9 @@ with main:
             )
 
             st.subheader("Interview Questions")
-
             st.write(questions)
 
             st.subheader("AI Hiring Recommendation")
-
             st.write(recommendation)
 
             df=pd.DataFrame(
@@ -337,7 +346,6 @@ with main:
             )
 
             st.subheader("Candidate Ranking")
-
             st.dataframe(df,use_container_width=True)
 
             st.subheader("Candidate Analysis")
@@ -347,9 +355,7 @@ with main:
                 st.markdown('<div class="result-card">',unsafe_allow_html=True)
 
                 st.markdown(f"### {rank}. {name}")
-
                 st.write(f"Match Score: {score}%")
-
                 st.write(f"Estimated Experience: {exp} years")
 
                 st.markdown("</div>", unsafe_allow_html=True)
