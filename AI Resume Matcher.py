@@ -19,80 +19,113 @@ st.set_page_config(
 )
 
 # ------------------------------------------------
-# BACKGROUND STYLE
+# SESSION STATE
 # ------------------------------------------------
 
-def set_background():
+if "analysis_done" not in st.session_state:
+    st.session_state.analysis_done = False
 
-    image_file = Path("background.png")
+# ------------------------------------------------
+# BACKGROUND CONTROL
+# ------------------------------------------------
 
-    with open(image_file, "rb") as f:
-        encoded = base64.b64encode(f.read()).decode()
+def set_background(show_image=True):
 
-    st.markdown(
-        f"""
-        <style>
+    base_color = "#071c2c"
 
-        [data-testid="stAppViewContainer"] {{
-            background-color:#071c2c;
-            background-image:url("data:image/png;base64,{encoded}");
-            background-position:85% center;
-            background-size:contain;
-            background-repeat:no-repeat;
-            background-attachment:fixed;
-        }}
+    if show_image:
 
-        .main {{
-            background:transparent;
-        }}
+        image_file = Path("background.png")
 
-        .block-container {{
-            background:transparent;
-            padding-top:3rem;
-            max-width:1200px;
-        }}
+        with open(image_file, "rb") as f:
+            encoded = base64.b64encode(f.read()).decode()
 
-        section[data-testid="stSidebar"] {{
-            background:#071c2c;
-            border-right:1px solid rgba(255,255,255,0.05);
-        }}
+        st.markdown(
+            f"""
+            <style>
 
-        #MainMenu {{visibility:hidden;}}
-        footer {{visibility:hidden;}}
-        header {{visibility:hidden;}}
+            [data-testid="stAppViewContainer"] {{
+                background-color:{base_color};
+                background-image:url("data:image/png;base64,{encoded}");
+                background-position:85% center;
+                background-size:contain;
+                background-repeat:no-repeat;
+                background-attachment:fixed;
+            }}
 
-        h1,h2,h3,h4,h5,h6 {{
-            color:white;
-        }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
-        p,span,div,label {{
-            color:#e6e6e6;
-        }}
+    else:
 
-        .section-card {{
-            background:rgba(7,28,44,0.85);
-            padding:25px;
-            border-radius:15px;
-            margin-bottom:30px;
-            backdrop-filter:blur(8px);
-            border:1px solid rgba(255,255,255,0.05);
-        }}
+        st.markdown(
+            f"""
+            <style>
 
-        .result-card {{
-            background:rgba(7,28,44,0.92);
-            padding:20px;
-            border-radius:10px;
-            margin-bottom:20px;
-            color:white;
-            border:1px solid rgba(255,255,255,0.05);
-        }}
+            [data-testid="stAppViewContainer"] {{
+                background-color:{base_color};
+                background-image:none;
+            }}
 
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
-set_background()
+# Apply background
+set_background(show_image=not st.session_state.analysis_done)
+
+# ------------------------------------------------
+# GLOBAL CSS
+# ------------------------------------------------
+
+st.markdown(
+"""
+<style>
+
+.main {background:transparent;}
+
+.block-container {
+background:transparent;
+padding-top:3rem;
+max-width:1200px;
+}
+
+section[data-testid="stSidebar"]{
+background:#071c2c;
+border-right:1px solid rgba(255,255,255,0.05);
+}
+
+#MainMenu {visibility:hidden;}
+footer {visibility:hidden;}
+header {visibility:hidden;}
+
+h1,h2,h3,h4,h5,h6{color:white;}
+p,span,div,label{color:#e6e6e6;}
+
+.section-card{
+background:rgba(7,28,44,0.85);
+padding:25px;
+border-radius:15px;
+margin-bottom:30px;
+border:1px solid rgba(255,255,255,0.05);
+}
+
+.result-card{
+background:rgba(7,28,44,0.92);
+padding:20px;
+border-radius:10px;
+margin-bottom:20px;
+color:white;
+border:1px solid rgba(255,255,255,0.05);
+}
+
+</style>
+""",
+unsafe_allow_html=True
+)
 
 # ------------------------------------------------
 # AI CONFIG
@@ -105,7 +138,7 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # ------------------------------------------------
-# AI CALL FUNCTION
+# AI CALL
 # ------------------------------------------------
 
 def call_ai(prompt):
@@ -126,18 +159,16 @@ def call_ai(prompt):
     if response.status_code != 200:
         return "AI Error"
 
-    data = response.json()
-
-    return data["choices"][0]["message"]["content"]
+    return response.json()["choices"][0]["message"]["content"]
 
 # ------------------------------------------------
-# TEXT EXTRACTION
+# FILE TEXT EXTRACTION
 # ------------------------------------------------
 
 def extract_text_from_pdf(file):
 
-    text = ""
     reader = PyPDF2.PdfReader(file)
+    text=""
 
     for page in reader.pages:
         text += page.extract_text()
@@ -149,90 +180,79 @@ def extract_text_from_docx(file):
     return docx2txt.process(file)
 
 # ------------------------------------------------
-# RESUME SCORING
+# RESUME MATCHING
 # ------------------------------------------------
 
 def compute_similarity(resume_texts, jd_text):
 
     jd_embedding = embedding_model.encode(jd_text, convert_to_tensor=True)
 
-    results = []
+    results=[]
 
-    for name, text in resume_texts:
+    for name,text in resume_texts:
 
         resume_embedding = embedding_model.encode(text, convert_to_tensor=True)
 
-        score = util.cos_sim(jd_embedding, resume_embedding).item()
+        score = util.cos_sim(jd_embedding,resume_embedding).item()
 
-        score = round(score * 100, 2)
+        score = round(score*100,2)
 
         experience = 3
 
-        results.append((name, text, score, experience))
+        results.append((name,text,score,experience))
 
-    return sorted(results, key=lambda x: x[2], reverse=True)
+    return sorted(results,key=lambda x:x[2],reverse=True)
 
 # ------------------------------------------------
-# INTERVIEW QUESTIONS
+# INTERVIEW QUESTIONS (JD ONLY)
 # ------------------------------------------------
 
-def generate_interview_questions(jd_text, resume_text, experience):
+def generate_interview_questions(jd_text):
 
     prompt = f"""
-You are a senior technical interviewer.
+Generate 10 interview questions based ONLY on the following Job Description.
 
-Generate 10 interview questions based on BOTH the job description
-and the candidate resume.
-
-Candidate Experience: {experience} years
-
-Difficulty:
-0-2 years → beginner
-2-5 years → intermediate
-5+ years → advanced
+Focus on:
+• technical skills
+• real-world scenarios
+• tools mentioned
 
 Job Description:
 {jd_text}
 
-Candidate Resume:
-{resume_text[:2000]}
-
-Return ONLY 10 numbered interview questions.
+Return only numbered questions.
 """
 
     return call_ai(prompt)
 
 # ------------------------------------------------
-# AI HIRING RECOMMENDATION
+# AI RECOMMENDATION
 # ------------------------------------------------
 
-def generate_recommendation(jd_text, resume_text, score):
+def generate_recommendation(jd_text,resume_text,score):
 
     prompt = f"""
-You are an AI hiring assistant.
-
-Based on the resume and job description,
-provide a hiring recommendation.
+Based on the resume and job description provide a hiring recommendation.
 
 Candidate Score: {score}%
 
 Job Description:
 {jd_text}
 
-Candidate Resume:
+Resume:
 {resume_text[:2000]}
 
 Provide:
-• Candidate fit level
-• Key strengths
+• Candidate fit
+• Strengths
 • Missing skills
-• Final hiring recommendation
+• Hiring recommendation
 """
 
     return call_ai(prompt)
 
 # ------------------------------------------------
-# SIDEBAR INPUT
+# SIDEBAR
 # ------------------------------------------------
 
 with st.sidebar:
@@ -257,10 +277,12 @@ with st.sidebar:
     analyze = st.button("Analyze Candidates")
 
 # ------------------------------------------------
-# MAIN APPLICATION
+# MAIN APP
 # ------------------------------------------------
 
 if analyze:
+
+    st.session_state.analysis_done=True
 
     if not resume_files or not jd_input:
 
@@ -268,92 +290,85 @@ if analyze:
 
     else:
 
-        resume_texts = []
+        resume_texts=[]
 
         for file in resume_files:
 
-            ext = os.path.splitext(file.name)[1]
+            ext=os.path.splitext(file.name)[1]
 
-            if ext == ".pdf":
-                text = extract_text_from_pdf(file)
-
+            if ext==".pdf":
+                text=extract_text_from_pdf(file)
             else:
-                text = extract_text_from_docx(file)
+                text=extract_text_from_docx(file)
 
-            resume_texts.append((file.name, text))
+            resume_texts.append((file.name,text))
 
-        results = compute_similarity(resume_texts, jd_input)
+        results=compute_similarity(resume_texts,jd_input)
 
-        # --------------------------------
+        top_candidate=results[0]
+
+        # ------------------------------------------------
         # INTERVIEW QUESTIONS
-        # --------------------------------
+        # ------------------------------------------------
 
-        top_candidate = results[0]
+        questions=generate_interview_questions(jd_input)
 
-        questions = generate_interview_questions(
-            jd_input,
-            top_candidate[1],
-            top_candidate[3]
-        )
+        st.markdown('<div class="section-card">',unsafe_allow_html=True)
 
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-
-        st.subheader("Interview Questions")
-
-        st.write(f"For candidate: **{top_candidate[0]}**")
+        st.subheader("Role-Based Interview Questions")
 
         st.write(questions)
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>',unsafe_allow_html=True)
 
-        # --------------------------------
+        # ------------------------------------------------
         # AI RECOMMENDATION
-        # --------------------------------
+        # ------------------------------------------------
 
-        recommendation = generate_recommendation(
+        recommendation=generate_recommendation(
             jd_input,
             top_candidate[1],
             top_candidate[2]
         )
 
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-card">',unsafe_allow_html=True)
 
         st.subheader("AI Hiring Recommendation")
 
         st.write(recommendation)
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>',unsafe_allow_html=True)
 
-        # --------------------------------
-        # RANKING TABLE
-        # --------------------------------
+        # ------------------------------------------------
+        # RANKING
+        # ------------------------------------------------
 
-        df = pd.DataFrame(
+        df=pd.DataFrame(
             [(i+1,r[0],r[2]) for i,r in enumerate(results)],
             columns=["Rank","Candidate Name","Match Score %"]
         )
 
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown('<div class="section-card">',unsafe_allow_html=True)
 
         st.subheader("Candidate Ranking")
 
         st.dataframe(df,use_container_width=True)
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>',unsafe_allow_html=True)
 
-        # --------------------------------
+        # ------------------------------------------------
         # CANDIDATE ANALYSIS
-        # --------------------------------
+        # ------------------------------------------------
 
         st.subheader("Candidate Analysis")
 
         for rank,(name,text,score,experience) in enumerate(results,1):
 
-            st.markdown('<div class="result-card">', unsafe_allow_html=True)
+            st.markdown('<div class="result-card">',unsafe_allow_html=True)
 
             st.markdown(f"### {rank}. {name}")
 
             st.write(f"Match Score: **{score}%**")
             st.write(f"Estimated Experience: **{experience} years**")
 
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('</div>',unsafe_allow_html=True)
