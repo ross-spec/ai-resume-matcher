@@ -34,32 +34,27 @@ def set_background():
         <style>
 
         [data-testid="stAppViewContainer"] {{
-            background: linear-gradient(
-                to right,
-                #0a0a0a 0%,
-                #0a0a0a 35%,
-                transparent 35%
-            ),
-            url("data:image/png;base64,{encoded}");
-
-            background-size: cover;
-            background-position: right center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
+            background-color:#0a0a0a;
+            background-image:url("data:image/png;base64,{encoded}");
+            background-position:85% center;
+            background-size:contain;
+            background-repeat:no-repeat;
+            background-attachment:fixed;
         }}
 
         .main {{
-            background: transparent;
+            background:transparent;
         }}
 
         .block-container {{
-            background: transparent;
-            padding-top: 2rem;
+            background:transparent;
+            padding-top:3rem;
+            max-width:1200px;
         }}
 
         section[data-testid="stSidebar"] {{
-            background: #0a0a0a;
-            border-right: 1px solid rgba(255,255,255,0.1);
+            background:#0a0a0a;
+            border-right:1px solid rgba(255,255,255,0.08);
         }}
 
         #MainMenu {{visibility:hidden;}}
@@ -75,7 +70,7 @@ def set_background():
         }}
 
         .section-card {{
-            background: rgba(0,0,0,0.65);
+            background:rgba(0,0,0,0.65);
             padding:25px;
             border-radius:15px;
             margin-bottom:30px;
@@ -179,7 +174,7 @@ def compute_similarity(resume_texts, jd_text):
     return sorted(results, key=lambda x: x[2], reverse=True)
 
 # ------------------------------------------------
-# INTERVIEW QUESTIONS (JD + RESUME)
+# INTERVIEW QUESTIONS
 # ------------------------------------------------
 
 def generate_interview_questions(jd_text, resume_text, experience):
@@ -208,7 +203,7 @@ Return numbered questions only.
     return call_ai(prompt)
 
 # ------------------------------------------------
-# SIDEBAR
+# SIDEBAR INPUT
 # ------------------------------------------------
 
 with st.sidebar:
