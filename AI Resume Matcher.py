@@ -76,30 +76,47 @@ padding-right:2rem;
 max-width:100%;
 }
 
-/* HEADINGS */
+/* MAIN HEADINGS */
 
 h1,h2,h3{
 color:white;
 }
 
+/* TEXT */
+
 p,label{
 color:#e6e6e6;
 }
 
-/* PANEL HEADER FIX (UPLOAD + JOB DESCRIPTION) */
+/* PANEL */
 
-.panel h2{
-background: rgba(7,28,44,0.85);
-padding:10px 15px;
-border-radius:8px;
-color:#ffffff !important;
-font-weight:700;
-letter-spacing:0.5px;
+.panel{
+background:rgba(7,28,44,0.80);
+padding:25px;
+border-radius:14px;
+backdrop-filter: blur(8px);
+box-shadow:0 0 15px rgba(0,191,255,0.2);
 }
 
-.panel label{
-color:#ffffff !important;
-font-weight:600;
+/* SECTION HEADERS */
+
+.section-header{
+background:linear-gradient(90deg,#00bfff,#0080ff);
+padding:10px 16px;
+border-radius:8px;
+color:white;
+font-weight:700;
+font-size:20px;
+margin-bottom:5px;
+box-shadow:0px 2px 10px rgba(0,0,0,0.3);
+}
+
+/* SECTION SUBTEXT */
+
+.section-sub{
+color:#e0f7ff;
+font-size:14px;
+margin-bottom:12px;
 }
 
 /* ANALYZE BUTTON */
@@ -115,7 +132,7 @@ font-size:16px !important;
 }
 
 .stButton > button:hover {
-background:#00a6e0 !important;
+background:#0099cc !important;
 color:black !important;
 }
 
@@ -132,15 +149,6 @@ opacity:1 !important;
 [data-testid="stFileUploader"] button{
 color:black !important;
 font-weight:700 !important;
-}
-
-/* RIGHT PANEL */
-
-.panel{
-background:rgba(7,28,44,0.85);
-padding:25px;
-border-radius:12px;
-backdrop-filter: blur(6px);
 }
 
 /* RESULT CARDS */
@@ -291,20 +299,22 @@ with panel:
 
     st.markdown('<div class="panel">', unsafe_allow_html=True)
 
-    st.header("Upload Resumes")
+    st.markdown('<div class="section-header">Upload Resumes</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Upload PDF or DOCX resumes</div>', unsafe_allow_html=True)
 
     resume_files = st.file_uploader(
-        "Upload PDF or DOCX resumes",
+        "",
         type=["pdf","docx"],
         accept_multiple_files=True
     )
 
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    st.header("Job Description")
+    st.markdown('<div class="section-header">Job Description</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-sub">Paste job description</div>', unsafe_allow_html=True)
 
     jd_input = st.text_area(
-        "Paste job description",
+        "",
         height=200
     )
 
