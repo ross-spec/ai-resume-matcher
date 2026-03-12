@@ -111,7 +111,7 @@ background:rgba(7,28,44,0.95);
 padding:20px;
 border-radius:10px;
 margin-bottom:15px;
-color:white;
+color:black;
 }
 
 </style>
@@ -342,3 +342,4 @@ with main:
                 st.write(f"Estimated Experience: {exp} years")
 
                 st.markdown("</div>", unsafe_allow_html=True)
+
