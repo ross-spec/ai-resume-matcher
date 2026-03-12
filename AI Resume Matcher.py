@@ -23,7 +23,7 @@ st.set_page_config(
 
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"]
 
-MODEL = "openchat/openchat-7b:free"
+MODEL = "mistralai/mistral-7b-instruct"
 
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -34,9 +34,7 @@ model = SentenceTransformer("all-MiniLM-L6-v2")
 # -----------------------------
 
 def call_ai(prompt):
-
     try:
-
         headers = {
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
             "Content-Type": "application/json"
@@ -46,20 +44,28 @@ def call_ai(prompt):
             "model": MODEL,
             "messages": [
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            "temperature": 0.2
         }
 
-        response = requests.post(API_URL, headers=headers, json=payload)
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
 
-        result = response.json()
+        if response.status_code != 200:
+            return f"API Error: {response.text}"
 
-        if "choices" in result:
-            return result["choices"][0]["message"]["content"]
+        data = response.json()
 
-        return f"AI Error: {result}"
+        if "choices" not in data:
+            return f"API Error: {data}"
+
+        return data["choices"][0]["message"]["content"]
 
     except Exception as e:
-
         return f"AI Exception: {str(e)}"
 
 # -----------------------------
@@ -308,3 +314,4 @@ with col2:
                     st.success(questions)
 
                     st.markdown("---")
+
