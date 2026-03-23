@@ -26,10 +26,19 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 
-/* ── reset & base ── */
-html, body, [class*="css"] {
+/* ── FORCE DARK BACKGROUND on all Streamlit wrappers ── */
+html, body { background-color: #080c14 !important; }
+.stApp { background-color: #080c14 !important; }
+.stApp > header { background-color: transparent !important; }
+[data-testid="stAppViewContainer"] { background-color: #080c14 !important; }
+[data-testid="stAppViewBlockContainer"] { background-color: #080c14 !important; }
+[data-testid="stVerticalBlock"] { background-color: transparent !important; }
+[data-testid="stHorizontalBlock"] { background-color: transparent !important; }
+section[data-testid="stSidebar"] { background-color: #0d1626 !important; }
+.main .block-container { background-color: transparent !important; }
+/* text color everywhere */
+html, body, .stApp, p, span, div, label, li, a {
     font-family: 'DM Sans', sans-serif;
-    background-color: #080c14 !important;
     color: #e8eaf0 !important;
 }
 
@@ -127,48 +136,55 @@ body::after {
 }
 
 /* ── metric tiles ── */
-[data-testid="metric-container"] {
-    background: rgba(15,23,42,0.8) !important;
-    border: 1px solid rgba(56,189,248,0.12) !important;
+[data-testid="metric-container"],
+[data-testid="stMetric"] {
+    background: #0f1a2e !important;
+    border: 1px solid rgba(56,189,248,0.22) !important;
     border-radius: 16px !important;
     padding: 1.2rem 1.5rem !important;
-    backdrop-filter: blur(12px);
     transition: border-color .2s;
 }
-[data-testid="metric-container"]:hover {
-    border-color: rgba(56,189,248,0.35) !important;
+[data-testid="metric-container"]:hover,
+[data-testid="stMetric"]:hover {
+    border-color: rgba(56,189,248,0.5) !important;
 }
+[data-testid="stMetricLabel"] > div,
+[data-testid="stMetricLabel"] p,
 [data-testid="stMetricLabel"] {
     font-family: 'DM Mono', monospace !important;
     font-size: .68rem !important;
     letter-spacing: .14em !important;
     text-transform: uppercase !important;
-    color: #64748b !important;
+    color: #7dd3fc !important;
 }
+[data-testid="stMetricValue"] > div,
 [data-testid="stMetricValue"] {
     font-family: 'Syne', sans-serif !important;
-    font-size: 2rem !important;
-    font-weight: 700 !important;
-    color: #f1f5f9 !important;
+    font-size: 2.2rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 
 /* ── section headers ── */
 .section-header {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-family: 'Syne', sans-serif !important;
+    font-size: 1.35rem !important;
+    font-weight: 700 !important;
     letter-spacing: -.02em;
-    color: #f1f5f9;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
     margin: 2.5rem 0 1rem;
     display: flex;
     align-items: center;
     gap: .55rem;
+    padding: .5rem 0;
 }
 .section-header::after {
     content: '';
     flex: 1;
     height: 1px;
-    background: linear-gradient(90deg, rgba(56,189,248,0.25), transparent);
+    background: linear-gradient(90deg, rgba(56,189,248,0.4), transparent);
     margin-left: .5rem;
 }
 
@@ -531,7 +547,7 @@ if analyze:
     ax.set_xlabel("Match Score (%)", color="#64748b", fontsize=9, fontfamily="monospace")
     ax.tick_params(colors="#94a3b8", labelsize=9)
     ax.spines[:].set_visible(False)
-    ax.xaxis.grid(True, color="rgba(255,255,255,0.05)", zorder=0)
+    ax.xaxis.grid(True, color=(1, 1, 1, 0.05), zorder=0)
     ax.set_axisbelow(True)
     for bar, val in zip(bars, values):
         ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height() / 2,
