@@ -6,5 +6,3 @@ matplotlib
 PyPDF2
 docx2txt
 sentence-transformers
-torch
-scikit-learn
