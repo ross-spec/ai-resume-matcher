@@ -102,24 +102,41 @@ body::after {
 }
 
 /* ── INPUTS ── */
-input, textarea, [data-testid="stTextInput"] input {
-    background: rgba(0,0,0,0.3) !important;
-    border: 1px solid rgba(56,189,248,0.15) !important;
-    border-radius: 10px !important; color: #cbd5e1 !important;
-    font-family: 'DM Mono', monospace !important; font-size: .85rem !important;
+input, [data-testid="stTextInput"] input {
+    background: #0d1626 !important;
+    border: 1px solid rgba(56,189,248,0.25) !important;
+    border-radius: 10px !important;
+    color: #f1f5f9 !important;
+    -webkit-text-fill-color: #f1f5f9 !important;
+    font-family: 'DM Mono', monospace !important;
+    font-size: .85rem !important;
+    caret-color: #38bdf8 !important;
 }
-input:focus, textarea:focus { border-color: rgba(56,189,248,0.42) !important; }
-textarea {
-    background: rgba(0,0,0,0.3) !important;
-    border: 1px solid rgba(56,189,248,0.14) !important;
-    border-radius: 10px !important; color: #cbd5e1 !important;
-    font-family: 'DM Mono', monospace !important; font-size: .82rem !important;
+input::placeholder { color: #475569 !important; -webkit-text-fill-color: #475569 !important; opacity: 1 !important; }
+input:focus { border-color: rgba(56,189,248,0.5) !important; box-shadow: 0 0 0 2px rgba(56,189,248,0.08) !important; background: #0f1e35 !important; }
+textarea, .stTextArea textarea, [data-testid="stTextArea"] textarea {
+    background: #0d1626 !important;
+    border: 1px solid rgba(56,189,248,0.25) !important;
+    border-radius: 10px !important;
+    color: #f1f5f9 !important;
+    -webkit-text-fill-color: #f1f5f9 !important;
+    font-family: 'DM Mono', monospace !important;
+    font-size: .84rem !important;
+    caret-color: #38bdf8 !important;
 }
-textarea::placeholder {
-    color: #64748b !important; opacity: 1 !important;
+textarea::placeholder,
+.stTextArea textarea::placeholder {
+    color: #475569 !important;
+    -webkit-text-fill-color: #475569 !important;
+    opacity: 1 !important;
 }
-textarea::-webkit-input-placeholder { color: #64748b !important; opacity: 1 !important; }
-textarea::-moz-placeholder { color: #64748b !important; opacity: 1 !important; }
+textarea::-webkit-input-placeholder { color: #475569 !important; -webkit-text-fill-color: #475569 !important; opacity: 1 !important; }
+textarea::-moz-placeholder           { color: #475569 !important; opacity: 1 !important; }
+textarea:focus, .stTextArea textarea:focus {
+    border-color: rgba(56,189,248,0.5) !important;
+    box-shadow: 0 0 0 2px rgba(56,189,248,0.08) !important;
+    background: #0f1e35 !important;
+}
 
 /* ── TABS ── */
 [data-testid="stTabs"] [role="tablist"] {
