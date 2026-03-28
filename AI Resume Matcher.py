@@ -276,6 +276,8 @@ for _k, _v in {
 # ══════════════════════════════════════════════════════════════════════
 # USER DB HELPERS
 # ══════════════════════════════════════════════════════════════════════
+def _hash(pw): return hashlib.sha256(pw.encode()).hexdigest()
+
 def _load_users():
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE) as f:
@@ -286,7 +288,22 @@ def _save_users(u):
     with open(USERS_FILE, "w") as f:
         json.dump(u, f, indent=2)
 
-def _hash(pw): return hashlib.sha256(pw.encode()).hexdigest()
+def _seed_demo_account():
+    """Always ensure demo account exists — called at app startup."""
+    users = _load_users()
+    if "demo@hireai.com" not in users:
+        users["demo@hireai.com"] = {
+            "name": "Demo User",
+            "password": _hash("demo123"),
+            "plan": "pro",          # give demo full Pro features
+            "scans_used": 0,
+            "joined": datetime.now().strftime("%Y-%m-%d"),
+            "stripe_customer_id": ""
+        }
+        _save_users(users)
+
+# Seed demo account every time the app starts
+_seed_demo_account()
 
 def _valid_email(e): return bool(re.match(r"[^@]+@[^@]+\.[^@]+", e))
 
@@ -334,14 +351,6 @@ def do_signup(name, email, password):
         "joined": datetime.now().strftime("%Y-%m-%d"), "stripe_customer_id": ""
     }
     _save_users(users)
-    # create demo account for testing
-    if "demo@hireai.com" not in users:
-        users["demo@hireai.com"] = {
-            "name": "Demo User", "password": _hash("demo123"),
-            "plan": "free", "scans_used": 0, "joined": datetime.now().strftime("%Y-%m-%d"),
-            "stripe_customer_id": ""
-        }
-        _save_users(users)
     st.session_state.update({
         "authenticated": True, "user_email": e, "user_name": name.strip(),
         "plan": "free", "scans_used": 0, "page": "app"
@@ -532,6 +541,7 @@ def page_auth():
                       text-align:center;margin-top:.9rem">
                 Demo → <span style="color:#38bdf8">demo@hireai.com</span> /
                 <span style="color:#38bdf8">demo123</span>
+                <span style="color:#22c55e;margin-left:.4rem">(Pro plan)</span>
             </p>
             """, unsafe_allow_html=True)
 
