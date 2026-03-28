@@ -115,6 +115,11 @@ textarea {
     border-radius: 10px !important; color: #cbd5e1 !important;
     font-family: 'DM Mono', monospace !important; font-size: .82rem !important;
 }
+textarea::placeholder {
+    color: #64748b !important; opacity: 1 !important;
+}
+textarea::-webkit-input-placeholder { color: #64748b !important; opacity: 1 !important; }
+textarea::-moz-placeholder { color: #64748b !important; opacity: 1 !important; }
 
 /* ── TABS ── */
 [data-testid="stTabs"] [role="tablist"] {
@@ -139,8 +144,21 @@ textarea {
 /* ── FILE UPLOADER ── */
 [data-testid="stFileUploader"] {
     background: rgba(0,0,0,0.2) !important;
-    border: 1px dashed rgba(56,189,248,0.22) !important;
+    border: 1px dashed rgba(56,189,248,0.35) !important;
     border-radius: 12px !important; padding: .4rem !important;
+}
+[data-testid="stFileUploader"] button,
+[data-testid="stFileUploaderDropzoneInstructions"] button,
+[data-testid="stBaseButton-secondary"] {
+    background: linear-gradient(120deg,#38bdf8,#818cf8) !important;
+    color: #080c14 !important; border: none !important;
+    font-family: 'Syne', sans-serif !important; font-weight: 700 !important;
+    border-radius: 8px !important; padding: .4rem 1.2rem !important;
+}
+[data-testid="stFileDropzoneInstructions"] span,
+[data-testid="stFileUploaderDropzoneInstructions"] span,
+[data-testid="stFileUploaderDropzoneInstructions"] small {
+    color: #94a3b8 !important; font-family: 'DM Mono', monospace !important;
 }
 
 /* ── DATAFRAME ── */
@@ -475,17 +493,14 @@ def render_nav(active="app"):
         </div>
         """, unsafe_allow_html=True)
     with nr:
-        b1, b2, b3 = st.columns(3)
+        b1, b2 = st.columns(2, gap="small")
         with b1:
             lbl = "📊 Dashboard" if active=="app" else "🚀 Screener"
-            if st.button(lbl, key="nav_toggle"):
+            if st.button(lbl, key="nav_toggle", use_container_width=True):
                 st.session_state.page = "dashboard" if active=="app" else "app"
                 st.rerun()
         with b2:
-            if active == "app":
-                pass
-        with b3:
-            if st.button("🚪 Sign Out", key="nav_out"):
+            if st.button("🚪 Sign Out", key="nav_out", use_container_width=True):
                 for k in ["authenticated","user_email","user_name","plan","scans_used","page"]:
                     st.session_state[k] = False if k=="authenticated" else ("auth" if k=="page" else "")
                 st.rerun()
