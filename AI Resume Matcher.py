@@ -289,10 +289,11 @@ hr { border-color: rgba(56,189,248,0.08) !important; }
 # ══════════════════════════════════════════════════════════════════════
 USERS_FILE = "hireai_users.json"
 
-PLAN_LIMITS = {"free": 3, "pro": 50, "business": 999999}
+PLAN_LIMITS = {"free": 3, "demo": 5, "pro": 50, "business": 999999}
 
 PLAN_FEATURES = {
     "free":     {"interview_questions": False, "ai_recommendation": False},
+    "demo":     {"interview_questions": False, "ai_recommendation": False},
     "pro":      {"interview_questions": True,  "ai_recommendation": True},
     "business": {"interview_questions": True,  "ai_recommendation": True},
 }
@@ -326,16 +327,16 @@ def _save_users(u):
 def _seed_demo_account():
     """Always ensure demo account exists — called at app startup."""
     users = _load_users()
-    if "demo@hireai.com" not in users:
-        users["demo@hireai.com"] = {
-            "name": "Demo User",
-            "password": _hash("demo123"),
-            "plan": "pro",          # give demo full Pro features
-            "scans_used": 0,
-            "joined": datetime.now().strftime("%Y-%m-%d"),
-            "stripe_customer_id": ""
-        }
-        _save_users(users)
+    # Always force demo account settings (resets plan & features on every restart)
+    users["demo@hireai.com"] = {
+        "name": "Demo User",
+        "password": _hash("demo123"),
+        "plan": "demo",       # 5 scans only — encourages real sign-up
+        "scans_used": 0,       # reset on every app restart
+        "joined": datetime.now().strftime("%Y-%m-%d"),
+        "stripe_customer_id": ""
+    }
+    _save_users(users)
 
 # Seed demo account every time the app starts
 _seed_demo_account()
@@ -573,7 +574,7 @@ def page_auth():
                       text-align:center;margin-top:.9rem">
                 Demo → <span style="color:#38bdf8">demo@hireai.com</span> /
                 <span style="color:#38bdf8">demo123</span>
-                <span style="color:#22c55e;margin-left:.4rem">(Pro plan)</span>
+                <span style="color:#f59e0b;margin-left:.4rem">(5 free scans)</span>
             </p>
             """, unsafe_allow_html=True)
 
