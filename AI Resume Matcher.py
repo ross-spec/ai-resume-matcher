@@ -302,6 +302,30 @@ hr { border-color: rgba(56,189,248,0.08) !important; }
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════
+# CURRENCY DETECTION
+# ══════════════════════════════════════════════════════════════════════
+def get_currency():
+    """Detect user location and return currency symbol + prices."""
+    try:
+        r = requests.get("https://ipapi.co/json/", timeout=3)
+        if r.status_code == 200:
+            country = r.json().get("country_code","IN")
+            if country == "IN":
+                return {
+                    "symbol": "₹", "code": "INR",
+                    "pro": "1,499", "business": "3,999",
+                    "pro_raw": 1499, "business_raw": 3999
+                }
+    except Exception:
+        pass
+    # Default to USD for all other countries
+    return {
+        "symbol": "$", "code": "USD",
+        "pro": "19", "business": "49",
+        "pro_raw": 19, "business_raw": 49
+    }
+
+# ══════════════════════════════════════════════════════════════════════
 # CONSTANTS & PLAN CONFIG
 # ══════════════════════════════════════════════════════════════════════
 USERS_FILE = "hireai_users.json"
@@ -415,6 +439,7 @@ def do_signup(name, email, password):
 # ══════════════════════════════════════════════════════════════════════
 
 # Plan prices in INR (paise = INR × 100)
+# Note: Razorpay only supports INR — international users pay INR equivalent
 PLAN_PRICES_INR = {
     "pro":      {"amount": 1499_00, "name": "HireAI Pro",      "desc": "50 scans/month + AI features"},
     "business": {"amount": 3999_00, "name": "HireAI Business", "desc": "Unlimited scans + all features"},
@@ -785,6 +810,7 @@ def page_auth():
 def page_dashboard():
     handle_razorpay_callback()   # check if returning from Razorpay payment
     render_nav("dashboard")
+    cur = get_currency()  # detect currency
 
     plan   = st.session_state.plan
     used   = st.session_state.scans_used
@@ -894,7 +920,7 @@ def page_dashboard():
         featured_cls = "" if cur else "featured"
         st.markdown(f"""<div class="price-card {featured_cls}" style="border-color:{'rgba(56,189,248,0.5)' if cur else ''}">
             <p style="font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:#38bdf8">Pro</p>
-            <div class="price-amt">₹1,499</div><div class="price-per">/ month</div>
+            f'<div class="price-amt">{cur["symbol"]}{cur["pro"]}</div><div class="price-per">/ month</div>'
             <div class="price-feat">✦ 50 resume scans/month<br>✦ AI skill extraction<br>✦ Semantic matching<br>✦ CSV export<br>✦ Interview questions<br>✦ AI recommendations</div>
         </div>""", unsafe_allow_html=True)
         if cur:
@@ -908,7 +934,7 @@ def page_dashboard():
         cur = plan == "business"
         st.markdown(f"""<div class="price-card" style="border-color:{'rgba(168,85,247,0.5)' if cur else 'rgba(56,189,248,0.1)'}">
             <p style="font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:#c084fc">Business</p>
-            <div class="price-amt">₹3,999</div><div class="price-per">/ month</div>
+            <div class="price-amt">{cur["symbol"]}{cur["business"]}</div><div class="price-per">/ month</div>
             <div class="price-feat">✦ Unlimited scans<br>✦ AI skill extraction<br>✦ Semantic matching<br>✦ CSV export<br>✦ Interview questions<br>✦ AI recommendations<br>✦ Priority support</div>
         </div>""", unsafe_allow_html=True)
         if cur:
@@ -1145,7 +1171,7 @@ def page_app():
                     Unlock the full platform</p>
                 <h3 style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;
                            color:#f1f5f9;margin:0 0 .5rem">
-                    Upgrade to Pro — ₹1,499/month</h3>
+                    Upgrade to Pro</h3>
                 <p style="font-family:'DM Sans',sans-serif;font-size:.9rem;color:#64748b;margin:0 0 1.2rem">
                     50 scans · Interview questions · AI recommendations · CSV export</p>
             </div>
