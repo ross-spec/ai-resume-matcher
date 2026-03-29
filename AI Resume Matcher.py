@@ -446,8 +446,8 @@ def verify_razorpay_payment(order_id, payment_id, signature):
         return False
 
 def show_razorpay_button(plan: str, email: str, name: str):
-    """Renders Razorpay checkout button. Upgrades instantly if keys not configured."""
-    # If Razorpay keys are not set — instant demo upgrade
+    """Opens Razorpay checkout as a full popup in the parent window."""
+    # If Razorpay keys not set — instant demo upgrade
     if not razorpay_keys_configured():
         _upgrade_locally(plan)
         st.success(f"✅ Upgraded to {plan.title()} plan successfully!")
@@ -456,51 +456,74 @@ def show_razorpay_button(plan: str, email: str, name: str):
 
     order_id, amount, key_id, plan_name = create_razorpay_order(plan, email)
     if not order_id:
-        # API call failed — still upgrade gracefully
         _upgrade_locally(plan)
         st.success(f"✅ Upgraded to {plan.title()} plan successfully!")
         st.rerun()
         return
 
     amount_inr = amount // 100
-    rzp_html = f"""
+    success_url = (
+        st.secrets.get("app_url", "http://localhost:8501")
+        + f"?rzp_order=ORDER_ID&rzp_payment=PAYMENT_ID"
+        + f"&rzp_sig=SIG&plan={plan}&email={email}"
+    )
+
+    # Inject Razorpay script into the PARENT window — opens as full-screen popup
+    st.markdown(f"""
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <button id="rzp-btn" style="
-        font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;
-        background:linear-gradient(120deg,#38bdf8,#818cf8);
-        color:#080c14;border:none;border-radius:10px;
-        padding:.65rem 2rem;cursor:pointer;width:100%;
-        transition:opacity .2s;">
-        💳 Pay ₹{amount_inr:,} — Upgrade to {plan_name}
-    </button>
     <script>
-    document.getElementById('rzp-btn').onclick = function(e) {{
-        e.preventDefault();
-        var options = {{
-            key:         "{key_id}",
-            amount:      "{amount}",
-            currency:    "INR",
-            name:        "HireAI",
-            description: "{plan_name}",
-            order_id:    "{order_id}",
-            prefill:     {{ email: "{email}", name: "{name}" }},
-            theme:       {{ color: "#38bdf8" }},
-            handler: function(response) {{
-                // Payment success — send details to parent page via URL param
-                window.top.location.href = window.top.location.href.split('?')[0]
-                    + "?rzp_order=" + response.razorpay_order_id
-                    + "&rzp_payment=" + response.razorpay_payment_id
-                    + "&rzp_sig=" + response.razorpay_signature
-                    + "&plan={plan}&email={email}";
-            }}
+    (function() {{
+        // Load Razorpay in parent window to avoid iframe restrictions
+        var script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = function() {{
+            var options = {{
+                key:         '{key_id}',
+                amount:      '{amount}',
+                currency:    'INR',
+                name:        'HireAI',
+                description: '{plan_name}',
+                order_id:    '{order_id}',
+                image:       'https://i.imgur.com/n5tjHFD.png',
+                prefill: {{
+                    name:  '{name}',
+                    email: '{email}'
+                }},
+                theme: {{
+                    color:       '#38bdf8',
+                    backdrop_color: 'rgba(8,12,20,0.85)'
+                }},
+                modal: {{
+                    ondismiss: function() {{
+                        console.log('Payment dismissed');
+                    }}
+                }},
+                handler: function(response) {{
+                    var url = window.location.href.split('?')[0]
+                        + '?rzp_order='   + response.razorpay_order_id
+                        + '&rzp_payment=' + response.razorpay_payment_id
+                        + '&rzp_sig='     + response.razorpay_signature
+                        + '&plan={plan}&email={email}';
+                    window.location.href = url;
+                }}
+            }};
+            var rzp = new Razorpay(options);
+            rzp.open();
         }};
-        var rzp = new Razorpay(options);
-        rzp.open();
-    }};
+        document.head.appendChild(script);
+    }})();
     </script>
-    """
-    import streamlit.components.v1 as components
-    components.html(rzp_html, height=70)
+    <div style="background:linear-gradient(120deg,rgba(56,189,248,0.1),rgba(129,140,248,0.1));
+                border:1px solid rgba(56,189,248,0.25);border-radius:12px;
+                padding:1rem 1.4rem;text-align:center;margin-top:.5rem">
+        <p style="font-family:'DM Mono',monospace;font-size:.8rem;color:#38bdf8;margin:0">
+            ⏳ Razorpay payment window is opening...<br>
+            <span style="font-size:.72rem;color:#64748b">
+                If it doesn't open, disable popup blocker and try again.
+            </span>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
 def handle_razorpay_callback():
     """Checks URL params after Razorpay redirect and upgrades plan."""
@@ -847,10 +870,9 @@ def page_dashboard():
         </div>""", unsafe_allow_html=True)
         if cur:
             st.markdown('<p style="font-family:\'DM Mono\',monospace;font-size:.7rem;color:#38bdf8;text-align:center;margin-top:.5rem">✓ Current Plan</p>', unsafe_allow_html=True)
-        elif plan == "free":
+        elif plan in ("free","demo"):
             if st.button("💳 Upgrade to Pro →", key="up_pro", use_container_width=True):
-                with st.spinner("Processing upgrade..."):
-                    show_razorpay_button("pro", email, st.session_state.user_name)
+                show_razorpay_button("pro", email, st.session_state.user_name)
 
     # BUSINESS
     with pc3:
@@ -864,8 +886,7 @@ def page_dashboard():
             st.markdown('<p style="font-family:\'DM Mono\',monospace;font-size:.7rem;color:#c084fc;text-align:center;margin-top:.5rem">✓ Current Plan</p>', unsafe_allow_html=True)
         elif plan != "business":
             if st.button("💳 Upgrade to Business →", key="up_biz", use_container_width=True):
-                with st.spinner("Processing upgrade..."):
-                    show_razorpay_button("business", email, st.session_state.user_name)
+                show_razorpay_button("business", email, st.session_state.user_name)
 
     # Footer
     st.markdown("""
