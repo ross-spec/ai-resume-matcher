@@ -446,7 +446,7 @@ def verify_razorpay_payment(order_id, payment_id, signature):
         return False
 
 def show_razorpay_button(plan: str, email: str, name: str):
-    """Opens Razorpay checkout as a full popup in the parent window."""
+    """Opens Razorpay checkout via a user-clickable button inside an iframe."""
     # If Razorpay keys not set — instant demo upgrade
     if not razorpay_keys_configured():
         _upgrade_locally(plan)
@@ -462,68 +462,80 @@ def show_razorpay_button(plan: str, email: str, name: str):
         return
 
     amount_inr = amount // 100
-    success_url = (
-        st.secrets.get("app_url", "http://localhost:8501")
-        + f"?rzp_order=ORDER_ID&rzp_payment=PAYMENT_ID"
-        + f"&rzp_sig=SIG&plan={plan}&email={email}"
-    )
+    app_url = st.secrets.get("app_url", "http://localhost:8501")
 
-    # Inject Razorpay script into the PARENT window — opens as full-screen popup
-    st.markdown(f"""
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-    <script>
-    (function() {{
-        // Load Razorpay in parent window to avoid iframe restrictions
-        var script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = function() {{
-            var options = {{
-                key:         '{key_id}',
-                amount:      '{amount}',
-                currency:    'INR',
-                name:        'HireAI',
-                description: '{plan_name}',
-                order_id:    '{order_id}',
-                image:       'https://i.imgur.com/n5tjHFD.png',
-                prefill: {{
-                    name:  '{name}',
-                    email: '{email}'
-                }},
-                theme: {{
-                    color:       '#38bdf8',
-                    backdrop_color: 'rgba(8,12,20,0.85)'
-                }},
-                modal: {{
-                    ondismiss: function() {{
-                        console.log('Payment dismissed');
-                    }}
-                }},
-                handler: function(response) {{
-                    var url = window.location.href.split('?')[0]
-                        + '?rzp_order='   + response.razorpay_order_id
-                        + '&rzp_payment=' + response.razorpay_payment_id
-                        + '&rzp_sig='     + response.razorpay_signature
-                        + '&plan={plan}&email={email}';
-                    window.location.href = url;
-                }}
-            }};
-            var rzp = new Razorpay(options);
-            rzp.open();
-        }};
-        document.head.appendChild(script);
-    }})();
-    </script>
-    <div style="background:linear-gradient(120deg,rgba(56,189,248,0.1),rgba(129,140,248,0.1));
-                border:1px solid rgba(56,189,248,0.25);border-radius:12px;
-                padding:1rem 1.4rem;text-align:center;margin-top:.5rem">
-        <p style="font-family:'DM Mono',monospace;font-size:.8rem;color:#38bdf8;margin:0">
-            ⏳ Razorpay payment window is opening...<br>
-            <span style="font-size:.72rem;color:#64748b">
-                If it doesn't open, disable popup blocker and try again.
-            </span>
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    import streamlit.components.v1 as components
+    rzp_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ background:transparent; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:120px; font-family:Arial,sans-serif; }}
+  #pay-btn {{
+    background: linear-gradient(120deg, #38bdf8, #818cf8);
+    color: #080c14;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 40px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    letter-spacing: .04em;
+    transition: opacity .2s, transform .2s;
+    box-shadow: 0 8px 24px rgba(56,189,248,0.35);
+  }}
+  #pay-btn:hover {{ opacity:.88; transform:translateY(-2px); }}
+  #pay-btn:active {{ transform:translateY(0); }}
+  #msg {{ font-size:12px; color:#64748b; margin-top:10px; text-align:center; display:none; }}
+</style>
+</head>
+<body>
+<button id="pay-btn" onclick="openRazorpay()">
+  💳 Pay ₹{amount_inr:,} — Complete Upgrade to {plan_name}
+</button>
+<div id="msg">⏳ Opening secure payment window...</div>
+<script>
+function openRazorpay() {{
+  document.getElementById('pay-btn').style.opacity = '0.6';
+  document.getElementById('msg').style.display = 'block';
+  var options = {{
+    key:         '{key_id}',
+    amount:      '{amount}',
+    currency:    'INR',
+    name:        'HireAI',
+    description: '{plan_name}',
+    order_id:    '{order_id}',
+    prefill: {{
+      name:  '{name}',
+      email: '{email}'
+    }},
+    theme: {{ color: '#38bdf8' }},
+    modal: {{
+      ondismiss: function() {{
+        document.getElementById('pay-btn').style.opacity = '1';
+        document.getElementById('msg').style.display = 'none';
+      }}
+    }},
+    handler: function(response) {{
+      var url = '{app_url}'
+        + '?rzp_order='   + response.razorpay_order_id
+        + '&rzp_payment=' + response.razorpay_payment_id
+        + '&rzp_sig='     + response.razorpay_signature
+        + '&plan={plan}&email={email}';
+      window.top.location.href = url;
+    }}
+  }};
+  var rzp = new Razorpay(options);
+  rzp.open();
+}}
+</script>
+</body>
+</html>
+"""
+    components.html(rzp_html, height=130, scrolling=False)
 
 def handle_razorpay_callback():
     """Checks URL params after Razorpay redirect and upgrades plan."""
