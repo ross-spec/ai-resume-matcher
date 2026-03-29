@@ -535,7 +535,7 @@ function openRazorpay() {{
 </body>
 </html>
 """
-    components.html(rzp_html, height=130, scrolling=False)
+    components.html(rzp_html, height=500, scrolling=False)
 
 def handle_razorpay_callback():
     """Checks URL params after Razorpay redirect and upgrades plan."""
