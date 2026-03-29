@@ -12,7 +12,7 @@ from sentence_transformers import SentenceTransformer, util
 # PAGE CONFIG
 # ══════════════════════════════════════════════════════════════════════
 st.set_page_config(
-    page_title="HireAI – Resume Intelligence",
+    page_title="HireAI – AI Resume Screening | DigiServe AI",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -285,6 +285,154 @@ hr { border-color: rgba(56,189,248,0.08) !important; }
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════
+# EMAIL NOTIFICATION HELPER
+# ══════════════════════════════════════════════════════════════════════
+def send_notification_email(user_name: str, user_email: str, event: str = "signup"):
+    """Send email notification to admin when user signs up or upgrades."""
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+
+        # Get SMTP config from secrets
+        smtp_host   = st.secrets.get("email", {}).get("smtp_host",   "smtp.gmail.com")
+        smtp_port   = int(st.secrets.get("email", {}).get("smtp_port", 587))
+        smtp_user   = st.secrets.get("email", {}).get("smtp_user",   "")
+        smtp_pass   = st.secrets.get("email", {}).get("smtp_pass",   "")
+        notify_to   = st.secrets.get("email", {}).get("notify_to",   "hello@digiseverai.com")
+
+        if not smtp_user or not smtp_pass:
+            return  # silently skip if not configured
+
+        now = datetime.now().strftime("%d %b %Y, %I:%M %p")
+
+        if event == "signup":
+            subject = f"🎉 New Signup — {user_name} joined HireAI!"
+            body    = f"""
+<html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px">
+<div style="max-width:520px;margin:auto;background:#ffffff;border-radius:12px;
+            padding:30px;box-shadow:0 4px 20px rgba(0,0,0,0.08)">
+
+  <div style="text-align:center;margin-bottom:24px">
+    <h1 style="color:#38bdf8;font-size:28px;margin:0">⚡ HireAI</h1>
+    <p style="color:#64748b;font-size:13px;margin:4px 0">by DigiServe AI</p>
+  </div>
+
+  <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;
+              padding:16px;margin-bottom:20px">
+    <h2 style="color:#16a34a;margin:0 0 4px;font-size:18px">🎉 New User Signed Up!</h2>
+    <p style="color:#15803d;margin:0;font-size:13px">{now}</p>
+  </div>
+
+  <table style="width:100%;border-collapse:collapse">
+    <tr style="background:#f8fafc">
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 font-weight:bold;color:#475569;font-size:13px;width:35%">👤 Name</td>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 color:#0f172a;font-size:13px">{user_name}</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 font-weight:bold;color:#475569;font-size:13px">📧 Email</td>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 color:#0f172a;font-size:13px">{user_email}</td>
+    </tr>
+    <tr style="background:#f8fafc">
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 font-weight:bold;color:#475569;font-size:13px">📋 Plan</td>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 color:#0f172a;font-size:13px">Free (Demo — 5 scans)</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 font-weight:bold;color:#475569;font-size:13px">📅 Joined</td>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 color:#0f172a;font-size:13px">{now}</td>
+    </tr>
+  </table>
+
+  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;
+              padding:14px;margin-top:20px">
+    <p style="margin:0;color:#1e40af;font-size:13px">
+      💡 <strong>Action needed:</strong> Follow up with {user_name} on
+      <a href="mailto:{user_email}" style="color:#2563eb">{user_email}</a>
+      to convert them to a paid plan!
+    </p>
+  </div>
+
+  <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:24px">
+    HireAI · DigiServe AI · digiseverai.com
+  </p>
+</div>
+</body></html>
+"""
+        elif event == "upgrade":
+            subject = f"💰 New Payment — {user_name} upgraded on HireAI!"
+            body    = f"""
+<html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:20px">
+<div style="max-width:520px;margin:auto;background:#ffffff;border-radius:12px;
+            padding:30px;box-shadow:0 4px 20px rgba(0,0,0,0.08)">
+
+  <div style="text-align:center;margin-bottom:24px">
+    <h1 style="color:#38bdf8;font-size:28px;margin:0">⚡ HireAI</h1>
+    <p style="color:#64748b;font-size:13px;margin:4px 0">by DigiServe AI</p>
+  </div>
+
+  <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;
+              padding:16px;margin-bottom:20px">
+    <h2 style="color:#d97706;margin:0 0 4px;font-size:18px">💰 New Payment Received!</h2>
+    <p style="color:#b45309;margin:0;font-size:13px">{now}</p>
+  </div>
+
+  <table style="width:100%;border-collapse:collapse">
+    <tr style="background:#f8fafc">
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 font-weight:bold;color:#475569;font-size:13px;width:35%">👤 Name</td>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 color:#0f172a;font-size:13px">{user_name}</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 font-weight:bold;color:#475569;font-size:13px">📧 Email</td>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 color:#0f172a;font-size:13px">{user_email}</td>
+    </tr>
+    <tr style="background:#f8fafc">
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 font-weight:bold;color:#475569;font-size:13px">⭐ Upgraded To</td>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 color:#16a34a;font-size:13px;font-weight:bold">PAID PLAN</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 font-weight:bold;color:#475569;font-size:13px">📅 Date</td>
+      <td style="padding:10px 14px;border:1px solid #e2e8f0;
+                 color:#0f172a;font-size:13px">{now}</td>
+    </tr>
+  </table>
+
+  <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:24px">
+    HireAI · DigiServe AI · digiseverai.com
+  </p>
+</div>
+</body></html>
+"""
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = f"HireAI Notifications <{smtp_user}>"
+        msg["To"]      = notify_to
+        msg.attach(MIMEText(body, "html"))
+
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, notify_to, msg.as_string())
+
+    except Exception:
+        pass  # never break the app if email fails
+
+# ══════════════════════════════════════════════════════════════════════
 # CONSTANTS & PLAN CONFIG
 # ══════════════════════════════════════════════════════════════════════
 USERS_FILE = "hireai_users.json"
@@ -357,6 +505,8 @@ def _upgrade_locally(plan):
         users[e]["plan"] = plan
         _save_users(users)
     st.session_state.plan = plan
+    # Send upgrade notification email to admin
+    send_notification_email(st.session_state.user_name, e, event="upgrade")
 
 # ══════════════════════════════════════════════════════════════════════
 # AUTH HELPERS
@@ -391,6 +541,8 @@ def do_signup(name, email, password):
         "authenticated": True, "user_email": e, "user_name": name.strip(),
         "plan": "free", "scans_used": 0, "page": "app"
     })
+    # Send notification email to admin
+    send_notification_email(name.strip(), e, event="signup")
     return True, "Account created!"
 
 # ══════════════════════════════════════════════════════════════════════
@@ -906,7 +1058,7 @@ def page_dashboard():
                 border-top:1px solid rgba(56,189,248,0.07)">
         <span style="font-family:'DM Mono',monospace;font-size:.65rem;
                      letter-spacing:.14em;color:#1e293b">
-            HIREAI · AI-POWERED RESUME INTELLIGENCE · BUILT WITH ♥
+            HIREAI by DigiServe AI · digiseverai.com · BUILT WITH ♥
         </span>
     </div>
     """, unsafe_allow_html=True)
@@ -933,7 +1085,7 @@ def page_app():
         <div style="padding:1.5rem 0 1rem">
             <p style="font-family:'DM Mono',monospace;font-size:.72rem;letter-spacing:.22em;
                       text-transform:uppercase;color:#38bdf8;margin:0 0 .8rem">
-                ⚡ Powered by AI · Built for modern hiring
+                ⚡ Powered by DigiServe AI · digiseverai.com
             </p>
             <h1 style="font-family:'Syne',sans-serif;font-size:clamp(2rem,4vw,3.2rem);
                        font-weight:800;letter-spacing:-.03em;line-height:1.1;
@@ -1142,7 +1294,7 @@ def page_app():
                 border-top:1px solid rgba(56,189,248,0.07)">
         <span style="font-family:'DM Mono',monospace;font-size:.65rem;
                      letter-spacing:.14em;color:#1e293b">
-            HIREAI · AI-POWERED RESUME INTELLIGENCE · BUILT WITH ♥
+            HIREAI by DigiServe AI · digiseverai.com · BUILT WITH ♥
         </span>
     </div>
     """, unsafe_allow_html=True)
