@@ -38,6 +38,16 @@ html, body, .stApp, p, span, div, label, li {
     color: #e8eaf0 !important;
 }
 #MainMenu, footer, header { visibility: hidden; }
+
+/* ── HIDE STREAMLIT TOOLBAR BUTTONS (deploy/github icons) ── */
+[data-testid="stToolbar"] { display: none !important; }
+[data-testid="stDecoration"] { display: none !important; }
+[data-testid="stDeployButton"] { display: none !important; }
+.stDeployButton { display: none !important; }
+button[data-testid="baseButton-header"] { display: none !important; }
+#stDecoration { display: none !important; }
+.viewerBadge_container__r5tak { display: none !important; }
+.viewerBadge_link__qRIco { display: none !important; }
 .block-container { padding: 2rem 2.8rem 4rem !important; max-width: 1400px !important; }
 
 /* ── MOBILE RESPONSIVE ── */
